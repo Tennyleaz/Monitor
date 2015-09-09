@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Monitor</string>
-
-    <string name="hello_world">Hello world!</string>
+    <string name="str_turn_on">緊急停止</string>
+    <string name="str_turn_off">重啟電源</string>
+    <string name="hello_world">連線狀態:</string>
     <string name="action_settings">Settings</string>
 </resources>
