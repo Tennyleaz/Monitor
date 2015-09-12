@@ -123,4 +123,12 @@
         android:layout_alignTop="@+id/textView"
         android:layout_alignStart="@+id/tv2" />
 
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/imageView"
+        android:src="@drawable/test"
+        android:layout_below="@+id/tv10"
+        android:layout_alignStart="@+id/tv10" />
+
 </RelativeLayout>

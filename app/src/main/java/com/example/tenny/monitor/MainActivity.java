@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -13,7 +14,9 @@ import android.os.Message;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.widget.ImageView;
 import android.widget.TextView;
+import com.google.zxing.WriterException;
 
 public class MainActivity extends Activity {
     static final String SERVERIP = "140.113.167.14";
@@ -23,6 +26,7 @@ public class MainActivity extends Activity {
     private static ProgressDialog pd;
     private AsyncTask task = null;
     private String str1, productSerial, itemCode;
+    private ImageView barcode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,8 +39,9 @@ public class MainActivity extends Activity {
         message = (TextView) findViewById(R.id.textView);
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
+        barcode = (ImageView) findViewById(R.id.imageView);
 
-        if(!isNetworkConnected()){  //close when not connected
+        if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
             dialog.setTitle("警告");
             dialog.setMessage("無網路連線,\n程式即將關閉");
@@ -73,7 +78,7 @@ public class MainActivity extends Activity {
         Log.d("Mylog", str1);
     }
 
-    private boolean isNetworkConnected(){
+    private boolean isNetworkConnected() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
@@ -98,6 +103,15 @@ public class MainActivity extends Activity {
         }
         msg.setText("1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...1234567890wwwwwwwwwwwwwwwwwwwwww1234567890..." +
                 "1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...");
+
+        String qrData = "Data I want to encode in QR code";
+
+        try {
+            Bitmap bitmap = OneDBarcode.encodeAsBitmap(qrData);
+            barcode.setImageBitmap(bitmap);
+        } catch (WriterException e) {
+            e.printStackTrace();
+        }
     }
 
     private class UpdateTask extends AsyncTask<Void, String, String> {
@@ -143,7 +157,10 @@ public class MainActivity extends Activity {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if(keyCode == KeyEvent.KEYCODE_BACK) {
             Log.d("Mylog", "back is pressed");
+            finish();
+            System.exit(0);
             SocketHandler.closeSocket();
+            Log.d("Mylog", "back is pressed2");
             task.cancel(true);
             finish();
         }
@@ -152,6 +169,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onStop(){
+        System.exit(0);
         task.cancel(true);
         SocketHandler.closeSocket();
         finish();

@@ -38,6 +38,7 @@ public class SocketHandler {
             socket.connect(new InetSocketAddress(ip, port));
             isCreated = true;
             in = socket.getInputStream();
+            out = socket.getOutputStream();
         }
         catch (UnknownHostException e)
         {
@@ -122,6 +123,8 @@ public class SocketHandler {
         Log.d("Mylog", "Socket closed");
         if(isCreated) {
             try {
+                socket.shutdownOutput();
+                socket.shutdownInput();
                 socket.close();
                 isCreated = false;
             }
