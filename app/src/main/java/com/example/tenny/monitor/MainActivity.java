@@ -12,21 +12,25 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Bundle;
+import android.support.v4.content.res.ResourcesCompat;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import com.google.zxing.WriterException;
 
 public class MainActivity extends Activity {
     static final String SERVERIP = "140.113.167.14";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
+    static final int SEEK_DEST = 95;
     private TextView Pname, Pcode, Iname, Icode, connectState, message, serialText;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
     private String str1, productSerial, itemCode;
     private ImageView barcode;
+    private SeekBar mySeekBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,10 +40,11 @@ public class MainActivity extends Activity {
         Pcode = (TextView) findViewById(R.id.tv4);
         Iname = (TextView) findViewById(R.id.tv6);
         Icode = (TextView) findViewById(R.id.tv10);
-        message = (TextView) findViewById(R.id.textView);
+        //message = (TextView) findViewById(R.id.textView);
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
         barcode = (ImageView) findViewById(R.id.imageView);
+        mySeekBar = (SeekBar) findViewById(R.id.myseek);
 
         if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -105,13 +110,33 @@ public class MainActivity extends Activity {
                 "1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...");
 
         String qrData = "Data I want to encode in QR code";
-
         try {
-            Bitmap bitmap = OneDBarcode.encodeAsBitmap(qrData);
+            Bitmap bitmap = OneDBarcode.encodeAsBitmap(qrData, 400, 150);
             barcode.setImageBitmap(bitmap);
         } catch (WriterException e) {
             e.printStackTrace();
         }
+
+        mySeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
+                if(seekBar.getProgress() > SEEK_DEST) {
+                    //TODO: apply change brand
+                } else {
+                    seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
+                    seekBar.setProgress(3);  //go back to zero
+                }
+            }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {  /* 開始拖動時觸發*/  }
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {  //進度改變時觸發  只要在拖動，就會重複觸發
+                if(progress > SEEK_DEST)
+                    seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider_ok, null));
+                else
+                    seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
+            }
+        });
     }
 
     private class UpdateTask extends AsyncTask<Void, String, String> {
@@ -129,6 +154,7 @@ public class MainActivity extends Activity {
         }
         protected void onProgressUpdate(String... values) {
             String result = values[0];
+            if(result.length() == 0) return;
             String[] lines = result.split("<END>");
             for(String s: lines) {
                 if(s != null && s.contains("MSG")) {
@@ -142,11 +168,20 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     String[] items = s.split("\t");
+                    String barcode_text = "";
                     if(items.length >= 4) {
                         Pcode.setText(items[0]);
                         Pname.setText(items[1]);
                         Icode.setText(items[2]);
+                        barcode_text = items[2];
                         Iname.setText(items[3]);
+                    }
+                    try {
+                        Bitmap bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 400, 150);
+                        barcode.setImageBitmap(bitmap);
+                        //barcode.setScaleType(ImageView.ScaleType.CENTER);
+                    } catch (WriterException e) {
+                        e.printStackTrace();
                     }
                 }
             }

@@ -95,7 +95,8 @@
         <com.example.tenny.monitor.ScrollForeverTextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textSize="@dimen/abc_text_size_display_1_material"
+            android:textColor="@color/black"
             android:text="Large Text"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="marquee_forever"
@@ -129,6 +130,31 @@
         android:id="@+id/imageView"
         android:src="@drawable/test"
         android:layout_below="@+id/tv10"
-        android:layout_alignStart="@+id/tv10" />
+        android:layout_alignStart="@+id/tv10"
+        android:layout_marginTop="10dp"/>
+
+    <SeekBar
+        android:id="@+id/myseek"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:clickable="false"
+        android:max="100"
+        android:progressDrawable="@color/gray"
+        android:thumb="@drawable/slider"
+        android:layout_alignBottom="@+id/tv6"
+        android:layout_toEndOf="@+id/imageView"
+        android:layout_marginStart="100dp"
+        android:layout_marginEnd="60dp"
+        android:layout_alignTop="@+id/tv4" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="向右滑動切換品牌"
+        android:id="@+id/textView2"
+        android:layout_alignTop="@+id/tv2"
+        android:layout_alignStart="@+id/myseek"
+        android:layout_marginStart="60dp"/>
 
 </RelativeLayout>

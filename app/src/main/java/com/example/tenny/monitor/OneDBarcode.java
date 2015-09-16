@@ -9,12 +9,12 @@ import com.google.zxing.common.BitMatrix;
 
 
 public class OneDBarcode {
-    public final static int WHITE = 0xFFFFFFFF;
-    public final static int BLACK = 0xFF000000;
+    private final static int WHITE = 0xFFFFFFFF;
+    private final static int BLACK = 0xFF000000;
 
-    public static Bitmap encodeAsBitmap(String str) throws WriterException {  //overloaded
-        return encodeAsBitmap(str, 400, 200);
-    }
+    /*public static Bitmap encodeAsBitmap(String str) throws WriterException {  //overloaded
+        return encodeAsBitmap(str, 400, 100);
+    }*/
 
     public static Bitmap encodeAsBitmap(String str, int WIDTH, int HEIGHT) throws WriterException {
         BitMatrix result;

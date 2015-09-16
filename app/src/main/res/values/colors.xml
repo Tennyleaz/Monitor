@@ -6,4 +6,5 @@
     <color name="green">#4caf50</color>
     <color name="gray">#bdbdbd</color>
     <color name="background">#fffafafa</color>
+    <color name="black">#ff000000</color>
 </resources>
