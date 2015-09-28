@@ -15,22 +15,31 @@ import android.os.Bundle;
 import android.support.v4.content.res.ResourcesCompat;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import com.google.zxing.WriterException;
+
+import java.util.List;
 
 public class MainActivity extends Activity {
     static final String SERVERIP = "140.113.167.14";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
-    private TextView Pname, Pcode, Iname, Icode, connectState, message, serialText;
+    private TextView Pname, Pcode, Iname, Icode, connectState, swapTitle, serialText;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
     private String str1, productSerial, itemCode;
     private ImageView barcode;
     private SeekBar mySeekBar;
+    private boolean connected, swapWorking;
+    private ListView mylist;
+    private List<String> List_file;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +53,13 @@ public class MainActivity extends Activity {
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
         barcode = (ImageView) findViewById(R.id.imageView);
+        mylist = (ListView) findViewById(R.id.listView);
         mySeekBar = (SeekBar) findViewById(R.id.myseek);
+        mySeekBar.setEnabled(false);
+        swapTitle = (TextView) findViewById(R.id.swapTitle);
+        swapTitle.setText("目前無換牌指令");
+        connected = false;
+        swapWorking = false;
 
         if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -69,6 +84,22 @@ public class MainActivity extends Activity {
                     handler.sendEmptyMessage(0);// 執行耗時的方法之後發送消給handler
                 }
 
+            }).start();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {  // 需要背景作的事
+                    try {
+                        for (int i = 0; i < 10; i++) {
+                            Thread.sleep(1000);
+                        }
+                        if(!connected) {
+                            Log.e("Mylog", "1000ms timeout");
+                            ServerDownHandler.sendEmptyMessage(0);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
             }).start();
         }
         task = new UpdateTask().execute();
@@ -97,31 +128,60 @@ public class MainActivity extends Activity {
         }
     };
 
+    private Handler ServerDownHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {// handler接收到消息後就會執行此方法
+            pd.dismiss();// 關閉ProgressDialog
+            AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+            dialog.setTitle("警告");
+            dialog.setMessage("伺服器無回應,\n程式即將關閉");
+            dialog.setPositiveButton("OK",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialoginterface, int i) {
+                            android.os.Process.killProcess(android.os.Process.myPid());
+                            System.exit(1);
+                        }
+                    });
+            dialog.show();
+        }
+    };
+
     private void updateUI() {
         if(str1.contains("CONNECT_OK")) {
             connectState.setText("伺服器辨識成功");
             connectState.setTextColor(getResources().getColor(R.color.green));
+            connected = true;
         }
         else {
             connectState.setText(str1);
             connectState.setTextColor(getResources().getColor(R.color.red));
+            connected = false;
         }
         msg.setText("1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...1234567890wwwwwwwwwwwwwwwwwwwwww1234567890..." +
                 "1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...");
 
-        String qrData = "Data I want to encode in QR code";
+        /*String qrData = "Data I want to encode in QR code";
         try {
             Bitmap bitmap = OneDBarcode.encodeAsBitmap(qrData, 400, 150);
             barcode.setImageBitmap(bitmap);
         } catch (WriterException e) {
             e.printStackTrace();
-        }
+        }*/
 
         mySeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
                 if(seekBar.getProgress() > SEEK_DEST) {
                     //TODO: apply change brand
+                    Pname.setText("");
+                    Pcode.setText("");
+                    Iname.setText("");
+                    Icode.setText("");
+                    barcode.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.test, null));
+                    swapTitle.setText("目前無換牌指令");
+                    swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
+                    task = new UpdateTask().execute();
+                    swapWorking = false;
                 } else {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
                     seekBar.setProgress(3);  //go back to zero
@@ -137,6 +197,15 @@ public class MainActivity extends Activity {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
             }
         });
+
+        List_file.add("No data");
+        mylist.setAdapter(new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, List_file));
+        mylist.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,long arg3) {
+                //args2 is the listViews Selected index
+            }
+        });
     }
 
     private class UpdateTask extends AsyncTask<Void, String, String> {
@@ -144,6 +213,7 @@ public class MainActivity extends Activity {
         protected String doInBackground(Void... v) {
             //Log.d("Mylog", "UpdateTask listening0...");
             while(!isCancelled()){
+                if(swapWorking) continue;
                 Log.d("Mylog", "UpdateTask listening...");
                 String result;
                 result = SocketHandler.getOutput();
@@ -157,13 +227,12 @@ public class MainActivity extends Activity {
             if(result.length() == 0) return;
             String[] lines = result.split("<END>");
             for(String s: lines) {
-                if(s != null && s.contains("MSG")) {
+                if(s != null && s.contains("MSG\t")) {
                     s = s.replaceAll("MSG\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     msg.setText(s);
-                }
-                else if(s != null && s.contains("LIST")) {
+                } else if(s != null && s.contains("LIST\t")) {
                     s = s.replaceAll("LIST\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -183,6 +252,22 @@ public class MainActivity extends Activity {
                     } catch (WriterException e) {
                         e.printStackTrace();
                     }
+                } else if(s!=null && s.contains("SWAP\t")) {
+                    //s = s.replaceAll("SWAP\t", "");
+                    AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+                    //dialog.setTitle("警告");
+                    dialog.setMessage("已下達換牌指令！");
+                    dialog.setPositiveButton("OK",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialoginterface, int i) {
+                                    mySeekBar.setEnabled(true);
+                                    swapTitle.setText("向右滑動切換品牌");
+                                    swapTitle.setTextColor(getResources().getColor(R.color.black));
+                                    swapWorking = true;
+                                    task.cancel(true);
+                                }
+                            });
+                    dialog.show();
                 }
             }
         }
