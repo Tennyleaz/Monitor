@@ -136,8 +136,8 @@
                     android:id="@+id/imageView"
                     android:src="@drawable/test"
                     android:layout_below="@+id/tv12"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginStart="7dp"
+                    android:layout_marginTop="20dp"
+                    android:layout_alignStart="@+id/tv7"
                     android:scaleType="centerCrop" />
 
                 <TextView
@@ -203,7 +203,6 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:layout_marginStart="10dp"
-                android:layout_marginEnd="3dp"
                 android:background="@color/background"
                 android:layout_weight="1">
 
@@ -216,24 +215,24 @@
                     android:layout_marginTop="30dp"
                     android:layout_gravity="center_horizontal" />
 
-                <ScrollView
+                <!--<ScrollView
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:id="@+id/scrollView"
-                    android:layout_gravity="center_horizontal" >
-
+                    android:layout_gravity="center_horizontal" > -->
                     <ListView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:id="@+id/listView" />
-                </ScrollView>
+                <!--</ScrollView>-->
             </LinearLayout>
         </TableRow>
         <TableRow
             android:background="@color/gray">
             <com.example.tenny.monitor.ScrollForeverTextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:lines="1"
                 android:textSize="@dimen/abc_text_size_display_1_material"
                 android:text="this is marquee~"
                 android:textColor="@color/black"
@@ -241,7 +240,8 @@
                 android:marqueeRepeatLimit="marquee_forever"
                 android:singleLine="true"
                 android:focusable="true"
-                android:id="@+id/msg"/>
+                android:id="@+id/msg"
+                android:layout_span="3" />
         </TableRow>
     </TableLayout>
 

@@ -16,14 +16,17 @@ import android.support.v4.content.res.ResourcesCompat;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import com.google.zxing.WriterException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity {
@@ -39,6 +42,7 @@ public class MainActivity extends Activity {
     private SeekBar mySeekBar;
     private boolean connected, swapWorking;
     private ListView mylist;
+    private ArrayAdapter<String> listAdapter;
     private List<String> List_file;
 
     @Override
@@ -108,7 +112,7 @@ public class MainActivity extends Activity {
     private void InitServer() {
         SocketHandler.closeSocket();
         SocketHandler.initSocket(SERVERIP, SERVERPORT);
-        String init = "CONNECT\tFF<END>";
+        String init = "CONNECT\tCM_1_M<END>";
         SocketHandler.writeToSocket(init);
         str1 = SocketHandler.getOutput();
         Log.d("Mylog", str1);
@@ -197,15 +201,22 @@ public class MainActivity extends Activity {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
             }
         });
-
-        List_file.add("No data");
-        mylist.setAdapter(new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, List_file));
-        mylist.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        //List_file = new ArrayList<String>();
+        //List_file.add("No data");
+        //List_file.add("No data 2");
+        //List_file.add("No data 3");
+        listAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1);
+        listAdapter.add("111");
+        listAdapter.add("222");
+        listAdapter.add("333");
+        mylist.setAdapter(listAdapter);
+        //setListViewHeightBasedOnChildren(mylist);
+        /*mylist.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,long arg3) {
+            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
                 //args2 is the listViews Selected index
             }
-        });
+        });*/
     }
 
     private class UpdateTask extends AsyncTask<Void, String, String> {
@@ -271,6 +282,26 @@ public class MainActivity extends Activity {
                 }
             }
         }
+    }
+
+    private static void setListViewHeightBasedOnChildren(ListView listView) {
+        ListAdapter listAdapter = listView.getAdapter();
+        if (listAdapter == null) {
+            // pre-condition
+            return;
+        }
+
+        int totalHeight = 0;
+        for (int i = 0; i < listAdapter.getCount(); i++) {
+            View listItem = listAdapter.getView(i, null, listView);
+            listItem.measure(0, 0);
+            totalHeight += listItem.getMeasuredHeight();
+        }
+
+        ViewGroup.LayoutParams params = listView.getLayoutParams();
+        params.height = totalHeight + (listView.getDividerHeight() * (listAdapter.getCount() - 1));
+        listView.setLayoutParams(params);
+        listView.requestLayout();
     }
 
     @Override
