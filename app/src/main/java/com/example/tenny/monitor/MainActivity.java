@@ -27,36 +27,39 @@ import android.widget.TextView;
 import com.google.zxing.WriterException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class MainActivity extends Activity {
     static final String SERVERIP = "140.113.167.14";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
-    private TextView Pname, Pcode, Iname, Icode, connectState, swapTitle, serialText;
+    private TextView connectState, swapTitle, countTV;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
     private String str1, productSerial, itemCode;
-    private ImageView barcode;
     private SeekBar mySeekBar;
     private boolean connected, swapWorking;
-    private ListView mylist;
+    private ListView mylist, firstlist;
     private ArrayAdapter<String> listAdapter;
-    private List<String> List_file;
+    private MySimpleArrayAdapter myAdapter;
+    //private ArrayAdapter<String> listAdapter01;
+    private ListItem[] List_file;
+    //private int count;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Pname = (TextView) findViewById(R.id.tv2);
-        Pcode = (TextView) findViewById(R.id.tv4);
-        Iname = (TextView) findViewById(R.id.tv6);
-        Icode = (TextView) findViewById(R.id.tv10);
+        //Pname = (TextView) findViewById(R.id.tv2);
+        //Pcode = (TextView) findViewById(R.id.tv4);
+        //Iname = (TextView) findViewById(R.id.tv6);
+        //Icode = (TextView) findViewById(R.id.tv10);
         //message = (TextView) findViewById(R.id.textView);
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
-        barcode = (ImageView) findViewById(R.id.imageView);
+        //barcode = (ImageView) findViewById(R.id.imageView);
         mylist = (ListView) findViewById(R.id.listView);
         mySeekBar = (SeekBar) findViewById(R.id.myseek);
         mySeekBar.setEnabled(false);
@@ -64,6 +67,9 @@ public class MainActivity extends Activity {
         swapTitle.setText("目前無換牌指令");
         connected = false;
         swapWorking = false;
+        countTV = (TextView) findViewById(R.id.count);
+        firstlist = (ListView) findViewById(R.id.listView2);
+        //count = 0;
 
         if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -177,11 +183,11 @@ public class MainActivity extends Activity {
             public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
                 if(seekBar.getProgress() > SEEK_DEST) {
                     //TODO: apply change brand
-                    Pname.setText("");
-                    Pcode.setText("");
-                    Iname.setText("");
-                    Icode.setText("");
-                    barcode.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.test, null));
+                    //Pname.setText("");
+                    //Pcode.setText("");
+                    //Iname.setText("");
+                    //Icode.setText("");
+                    //barcode.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.test, null));
                     swapTitle.setText("目前無換牌指令");
                     swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
                     task = new UpdateTask().execute();
@@ -210,6 +216,9 @@ public class MainActivity extends Activity {
         listAdapter.add("222");
         listAdapter.add("333");
         mylist.setAdapter(listAdapter);
+
+
+        //listAdapter01 = new ArrayAdapter(this, R.layout.my_list_item);
         //setListViewHeightBasedOnChildren(mylist);
         /*mylist.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -217,6 +226,7 @@ public class MainActivity extends Activity {
                 //args2 is the listViews Selected index
             }
         });*/
+
     }
 
     private class UpdateTask extends AsyncTask<Void, String, String> {
@@ -237,12 +247,23 @@ public class MainActivity extends Activity {
             String result = values[0];
             if(result.length() == 0) return;
             String[] lines = result.split("<END>");
+            int length = lines.length;
+            List_file = new ListItem[length];
+            int c=0;
+            boolean updateList = false;
             for(String s: lines) {
                 if(s != null && s.contains("MSG\t")) {
                     s = s.replaceAll("MSG\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     msg.setText(s);
+                } else if(s!=null && s.contains("UPDATE_LIST\t")) {
+                    s = s.replaceAll("UPDATE_LIST\t", "");
+                    String[] items = s.split("\t");
+                    if(items.length >= 2) {
+                        if (items[0].equals(productSerial))
+                            countTV.setText(items[1]);
+                    }
                 } else if(s != null && s.contains("LIST\t")) {
                     s = s.replaceAll("LIST\t", "");
                     s = s.replaceAll("<N>", "\n");
@@ -250,19 +271,25 @@ public class MainActivity extends Activity {
                     String[] items = s.split("\t");
                     String barcode_text = "";
                     if(items.length >= 4) {
-                        Pcode.setText(items[0]);
-                        Pname.setText(items[1]);
-                        Icode.setText(items[2]);
+                        updateList = true;
+                        List_file = new ListItem[items.length];
+                        //Pcode.setText(items[0]);
+                        //Pname.setText(items[1]);
+                        //Icode.setText(items[2]);
                         barcode_text = items[2];
-                        Iname.setText(items[3]);
+                        //Iname.setText(items[3]);
+                        Bitmap bitmap = null;
+                        try {
+                            bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 400, 150);
+                            //barcode.setImageBitmap(bitmap);
+                            //barcode.setScaleType(ImageView.ScaleType.CENTER);
+                        } catch (WriterException e) {
+                            e.printStackTrace();
+                        }
+                        ListItem singleItem = new ListItem(items[3], items[2], 0, bitmap);
+                        List_file[c] = singleItem;
                     }
-                    try {
-                        Bitmap bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 400, 150);
-                        barcode.setImageBitmap(bitmap);
-                        //barcode.setScaleType(ImageView.ScaleType.CENTER);
-                    } catch (WriterException e) {
-                        e.printStackTrace();
-                    }
+                    c++;
                 } else if(s!=null && s.contains("SWAP\t")) {
                     //s = s.replaceAll("SWAP\t", "");
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -280,6 +307,10 @@ public class MainActivity extends Activity {
                             });
                     dialog.show();
                 }
+            }
+            if(updateList) {
+                myAdapter = new MySimpleArrayAdapter(MainActivity.this, List_file);
+                firstlist.setAdapter(myAdapter);
             }
         }
     }
