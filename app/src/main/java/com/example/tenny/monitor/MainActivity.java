@@ -38,14 +38,14 @@ public class MainActivity extends Activity {
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
-    private String str1, productSerial, itemCode;
+    private String str1;
     private SeekBar mySeekBar;
     private boolean connected, swapWorking;
     private ListView mylist, firstlist;
     private ArrayAdapter<String> listAdapter;
     private MySimpleArrayAdapter myAdapter;
     //private ArrayAdapter<String> listAdapter01;
-    private ListItem[] List_file;
+    private ArrayList<ListItem> List_file;
     //private int count;
 
     @Override
@@ -67,7 +67,7 @@ public class MainActivity extends Activity {
         swapTitle.setText("目前無換牌指令");
         connected = false;
         swapWorking = false;
-        countTV = (TextView) findViewById(R.id.count);
+        countTV = (TextView) findViewById(R.id.itemCount);
         firstlist = (ListView) findViewById(R.id.listView2);
         //count = 0;
 
@@ -248,8 +248,8 @@ public class MainActivity extends Activity {
             if(result.length() == 0) return;
             String[] lines = result.split("<END>");
             int length = lines.length;
-            List_file = new ListItem[length];
-            int c=0;
+
+            Log.d("Mylog", "lines.length=" + length);
             boolean updateList = false;
             for(String s: lines) {
                 if(s != null && s.contains("MSG\t")) {
@@ -261,35 +261,40 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("UPDATE_LIST\t", "");
                     String[] items = s.split("\t");
                     if(items.length >= 2) {
-                        if (items[0].equals(productSerial))
-                            countTV.setText(items[1]);
+                        //TODO: if (items[0].equals(productSerial))
+
                     }
                 } else if(s != null && s.contains("LIST\t")) {
+                    if(List_file != null) {
+                        List_file.clear();
+                        List_file = new ArrayList<ListItem>();
+                    } else
+                        List_file = new ArrayList<ListItem>();
                     s = s.replaceAll("LIST\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
-                    String[] items = s.split("\t");
-                    String barcode_text = "";
-                    if(items.length >= 4) {
-                        updateList = true;
-                        List_file = new ListItem[items.length];
-                        //Pcode.setText(items[0]);
-                        //Pname.setText(items[1]);
-                        //Icode.setText(items[2]);
-                        barcode_text = items[2];
-                        //Iname.setText(items[3]);
-                        Bitmap bitmap = null;
-                        try {
-                            bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 400, 150);
-                            //barcode.setImageBitmap(bitmap);
-                            //barcode.setScaleType(ImageView.ScaleType.CENTER);
-                        } catch (WriterException e) {
-                            e.printStackTrace();
+                    String[] items = s.split("\n");
+                    for(String i: items){
+                        Log.d("Mylog",", line i=" + i);
+                        String[] single_item = i.split("\t");
+                        String barcode_text = "";
+                        if(single_item.length >= 4) {
+                            updateList = true;
+                            barcode_text = single_item[2];
+                            Log.d("Mylog", "barcode_text=" + barcode_text);
+                            Bitmap bitmap = null;
+                            try {
+                                bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 400, 100);
+                                //barcode.setImageBitmap(bitmap);
+                                //barcode.setScaleType(ImageView.ScaleType.CENTER);
+                            } catch (WriterException e) {
+                                e.printStackTrace();
+                            }
+                            ListItem singleItem = new ListItem(single_item[3], single_item[2], 0, bitmap);
+                            List_file.add(singleItem);
                         }
-                        ListItem singleItem = new ListItem(items[3], items[2], 0, bitmap);
-                        List_file[c] = singleItem;
                     }
-                    c++;
+
                 } else if(s!=null && s.contains("SWAP\t")) {
                     //s = s.replaceAll("SWAP\t", "");
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);

@@ -3,8 +3,8 @@ package com.example.tenny.monitor;
 /**
  * Created by Tenny on 2015/10/6.
  */
-import android.app.Activity;
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,44 +12,44 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class MySimpleArrayAdapter extends ArrayAdapter<ListItem> {
-    private final Context context;
-    private final ListItem[] items;
+import java.util.ArrayList;
 
-    public MySimpleArrayAdapter(Context context, ListItem[] items) {
+public class MySimpleArrayAdapter extends ArrayAdapter<ListItem> {
+
+    public MySimpleArrayAdapter(Context context, ArrayList<ListItem> items) {
         super(context, R.layout.my_list_item, items);
-        this.context = context;
-        this.items = items;
     }
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        View rowView = convertView;
-        // reuse views
-        if(rowView == null)
-        {
-            LayoutInflater inflater = ((Activity)context).getLayoutInflater();
-            rowView = inflater.inflate(R.layout.my_list_item, parent, false);
-            // configure view holder
-            ItemHolder viewHolder = new ItemHolder();
-            viewHolder.first = (TextView) rowView.findViewById(R.id.firstLine);
-            viewHolder.second = (TextView) rowView.findViewById(R.id.secondLine);
-            viewHolder.count = (TextView) rowView.findViewById(R.id.count);
-            viewHolder.image = (ImageView) rowView.findViewById(R.id.icon);
-            rowView.setTag(viewHolder);
+        // Get the data item for this position
+        ListItem i = getItem(position);
+        // Check if an existing view is being reused, otherwise inflate the view
+        ItemHolder viewHolder;
+        if (convertView == null) {
+            viewHolder = new ItemHolder();
+            convertView = LayoutInflater.from(getContext()).inflate(R.layout.my_list_item, parent, false);
+            viewHolder.first = (TextView) convertView.findViewById(R.id.firstLine);
+            viewHolder.second = (TextView) convertView.findViewById(R.id.secondLine);
+            viewHolder.itemCount = (TextView) convertView.findViewById(R.id.itemCount);
+            viewHolder.image = (ImageView) convertView.findViewById(R.id.icon);
+            convertView.setTag(viewHolder);
+        } else {
+            viewHolder = (ItemHolder) convertView.getTag();
         }
-
-        // fill data
-        ItemHolder holder = (ItemHolder) rowView.getTag();
-        holder.first.setText(items[position].productName);
-        holder.second.setText(items[position].productSerial);
-        holder.count.setText(items[position].count);
-        holder.image.setImageBitmap(items[position].barcode);
-        return rowView;
+        // Populate the data into the template view using the data object
+        Log.d("MySimpleArrayAdapter", "position=" + position + ", first=" + i.productName);
+        Log.d("MySimpleArrayAdapter", "second=" + i.productSerial);
+        Log.d("MySimpleArrayAdapter", "itemCount=" + i.itemCount);
+        viewHolder.first.setText(i.productName);
+        viewHolder.second.setText(i.productSerial);
+        viewHolder.itemCount.setText(String.valueOf(i.itemCount));
+        viewHolder.image.setImageBitmap(i.barcode);
+        return convertView;
     }
 
     static class ItemHolder {
-        public TextView first, second, count;
+        public TextView first, second, itemCount;
         public ImageView image;
     }
 
