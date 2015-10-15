@@ -4,6 +4,7 @@ package com.example.tenny.monitor;
  * Created by Tenny on 2015/10/6.
  */
 import android.content.Context;
+import android.database.DataSetObserver;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -51,6 +52,19 @@ public class MySimpleArrayAdapter extends ArrayAdapter<ListItem> {
     static class ItemHolder {
         public TextView first, second, itemCount;
         public ImageView image;
+    }
+
+    private ArrayList<DataSetObserver> observers = new ArrayList<DataSetObserver>();
+
+    public void registerDataSetObserver(DataSetObserver observer) {
+        observers.add(observer);
+    }
+
+    public void notifyDataSetChanged(){
+        for (DataSetObserver observer: observers) {
+            observer.onChanged();
+            Log.d("Mylog", "Data onChanged");
+        }
     }
 
 }

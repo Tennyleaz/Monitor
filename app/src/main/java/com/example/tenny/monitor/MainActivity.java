@@ -183,18 +183,18 @@ public class MainActivity extends Activity {
             public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
                 if(seekBar.getProgress() > SEEK_DEST) {
                     //TODO: apply change brand
-                    //Pname.setText("");
-                    //Pcode.setText("");
-                    //Iname.setText("");
-                    //Icode.setText("");
-                    //barcode.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.test, null));
+                    if(List_file != null)
+                        List_file.clear();
+                    myAdapter.notifyDataSetChanged();
                     swapTitle.setText("目前無換牌指令");
                     swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
+                    seekBar.setProgress(5);
+                    seekBar.setEnabled(false);
                     task = new UpdateTask().execute();
                     swapWorking = false;
                 } else {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
-                    seekBar.setProgress(3);  //go back to zero
+                    seekBar.setProgress(5);  //go back to zero
                 }
             }
             @Override
@@ -207,26 +207,12 @@ public class MainActivity extends Activity {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
             }
         });
-        //List_file = new ArrayList<String>();
-        //List_file.add("No data");
-        //List_file.add("No data 2");
-        //List_file.add("No data 3");
+
         listAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1);
         listAdapter.add("111");
         listAdapter.add("222");
         listAdapter.add("333");
         mylist.setAdapter(listAdapter);
-
-
-        //listAdapter01 = new ArrayAdapter(this, R.layout.my_list_item);
-        //setListViewHeightBasedOnChildren(mylist);
-        /*mylist.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-                //args2 is the listViews Selected index
-            }
-        });*/
-
     }
 
     private class UpdateTask extends AsyncTask<Void, String, String> {
@@ -260,9 +246,15 @@ public class MainActivity extends Activity {
                 } else if(s!=null && s.contains("UPDATE_LIST\t")) {
                     s = s.replaceAll("UPDATE_LIST\t", "");
                     String[] items = s.split("\t");
-                    if(items.length >= 2) {
+                    if(items.length >= 2 && List_file != null) {
                         //TODO: if (items[0].equals(productSerial))
-
+                        for(int j=0; j<List_file.size(); j++){
+                            if(List_file.get(j).productSerial.equals(items[0])) {
+                                List_file.get(j).itemCount = items[1];
+                                Log.d("mylog", "becomes: " + List_file.get(j).itemCount);
+                                myAdapter.notifyDataSetChanged();
+                            }
+                        }
                     }
                 } else if(s != null && s.contains("LIST\t")) {
                     if(List_file != null) {
@@ -284,21 +276,22 @@ public class MainActivity extends Activity {
                             Log.d("Mylog", "barcode_text=" + barcode_text);
                             Bitmap bitmap = null;
                             try {
-                                bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 400, 100);
+                                bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 450, 100);
                                 //barcode.setImageBitmap(bitmap);
                                 //barcode.setScaleType(ImageView.ScaleType.CENTER);
                             } catch (WriterException e) {
                                 e.printStackTrace();
                             }
-                            ListItem singleItem = new ListItem(single_item[3], single_item[2], 0, bitmap);
+                            ListItem singleItem = new ListItem(single_item[3], single_item[2], "0.0", bitmap);
                             List_file.add(singleItem);
                         }
                     }
 
                 } else if(s!=null && s.contains("SWAP\t")) {
                     //s = s.replaceAll("SWAP\t", "");
+                    Log.d("Mylog", "swap!!");
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
-                    //dialog.setTitle("警告");
+                    dialog.setTitle("警告");
                     dialog.setMessage("已下達換牌指令！");
                     dialog.setPositiveButton("OK",
                             new DialogInterface.OnClickListener() {
@@ -310,6 +303,7 @@ public class MainActivity extends Activity {
                                     task.cancel(true);
                                 }
                             });
+                    Log.d("Mylog", "prepare to show dialog...");
                     dialog.show();
                 }
             }
@@ -320,7 +314,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private static void setListViewHeightBasedOnChildren(ListView listView) {
+    /*private static void setListViewHeightBasedOnChildren(ListView listView) {
         ListAdapter listAdapter = listView.getAdapter();
         if (listAdapter == null) {
             // pre-condition
@@ -338,7 +332,7 @@ public class MainActivity extends Activity {
         params.height = totalHeight + (listView.getDividerHeight() * (listAdapter.getCount() - 1));
         listView.setLayoutParams(params);
         listView.requestLayout();
-    }
+    }*/
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
