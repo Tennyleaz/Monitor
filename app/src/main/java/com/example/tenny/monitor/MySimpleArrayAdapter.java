@@ -54,7 +54,7 @@ public class MySimpleArrayAdapter extends ArrayAdapter<ListItem> {
         public ImageView image;
     }
 
-    private ArrayList<DataSetObserver> observers = new ArrayList<DataSetObserver>();
+    /*private ArrayList<DataSetObserver> observers = new ArrayList<DataSetObserver>();
 
     public void registerDataSetObserver(DataSetObserver observer) {
         observers.add(observer);
@@ -65,6 +65,6 @@ public class MySimpleArrayAdapter extends ArrayAdapter<ListItem> {
             observer.onChanged();
             Log.d("Mylog", "Data onChanged");
         }
-    }
+    }*/
 
 }
