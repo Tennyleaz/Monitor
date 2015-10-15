@@ -247,7 +247,7 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("UPDATE_LIST\t", "");
                     String[] items = s.split("\t");
                     if(items.length >= 2 && List_file != null) {
-                        //TODO: if (items[0].equals(productSerial))
+                        //TODO: update list
                         for(int j=0; j<List_file.size(); j++){
                             if(List_file.get(j).productSerial.equals(items[0])) {
                                 List_file.get(j).itemCount = items[1];
