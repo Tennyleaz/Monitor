@@ -39,9 +39,9 @@ public class MySimpleArrayAdapter extends ArrayAdapter<ListItem> {
             viewHolder = (ItemHolder) convertView.getTag();
         }
         // Populate the data into the template view using the data object
-        Log.d("MySimpleArrayAdapter", "position=" + position + ", first=" + i.productName);
-        Log.d("MySimpleArrayAdapter", "second=" + i.productSerial);
-        Log.d("MySimpleArrayAdapter", "itemCount=" + i.itemCount);
+        //Log.d("MySimpleArrayAdapter", "position=" + position + ", first=" + i.productName);
+        //Log.d("MySimpleArrayAdapter", "second=" + i.productSerial);
+        //Log.d("MySimpleArrayAdapter", "itemCount=" + i.itemCount);
         viewHolder.first.setText(i.productName);
         viewHolder.second.setText(i.productSerial);
         viewHolder.itemCount.setText(String.valueOf(i.itemCount));

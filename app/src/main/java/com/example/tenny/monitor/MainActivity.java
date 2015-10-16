@@ -34,32 +34,26 @@ public class MainActivity extends Activity {
     static final String SERVERIP = "140.113.167.14";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
-    private TextView connectState, swapTitle, countTV;
+    private TextView connectState, swapTitle, brandName;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
-    private String str1;
+    private String str1, bname;
     private SeekBar mySeekBar;
-    private boolean connected, swapWorking;
+    private boolean connected, swapWorking, swapEnd;
     private ListView mylist, firstlist;
     private ArrayAdapter<String> listAdapter;
     private MySimpleArrayAdapter myAdapter;
     //private ArrayAdapter<String> listAdapter01;
     private ArrayList<ListItem> List_file;
-    //private int count;
+    private int connectionTimeoutCount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //Pname = (TextView) findViewById(R.id.tv2);
-        //Pcode = (TextView) findViewById(R.id.tv4);
-        //Iname = (TextView) findViewById(R.id.tv6);
-        //Icode = (TextView) findViewById(R.id.tv10);
-        //message = (TextView) findViewById(R.id.textView);
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
-        //barcode = (ImageView) findViewById(R.id.imageView);
         mylist = (ListView) findViewById(R.id.listView);
         mySeekBar = (SeekBar) findViewById(R.id.myseek);
         mySeekBar.setEnabled(false);
@@ -67,9 +61,11 @@ public class MainActivity extends Activity {
         swapTitle.setText("目前無換牌指令");
         connected = false;
         swapWorking = false;
-        countTV = (TextView) findViewById(R.id.itemCount);
+        swapEnd = false;
+        //countTV = (TextView) findViewById(R.id.itemCount);.
+        brandName = (TextView) findViewById(R.id.brandName);
         firstlist = (ListView) findViewById(R.id.listView2);
-        //count = 0;
+        connectionTimeoutCount = 0;
 
         if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -144,7 +140,7 @@ public class MainActivity extends Activity {
             pd.dismiss();// 關閉ProgressDialog
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
             dialog.setTitle("警告");
-            dialog.setMessage("伺服器無回應,\n程式即將關閉");
+            dialog.setMessage("伺服器無回應，程式即將關閉\n請嘗試重新連線或洽系統管理員");
             dialog.setPositiveButton("OK",
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialoginterface, int i) {
@@ -190,8 +186,14 @@ public class MainActivity extends Activity {
                     swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
                     seekBar.setProgress(5);
                     seekBar.setEnabled(false);
+                    swapEnd = true;
+                    bname = "";
+                    brandName.setText(bname);
+                    if(task != null)
+                        task.cancel(true);
                     task = new UpdateTask().execute();
-                    swapWorking = false;
+                    Log.d("Mylog", "swap end.");
+                    //swapWorking = false;
                 } else {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
                     seekBar.setProgress(5);  //go back to zero
@@ -219,23 +221,62 @@ public class MainActivity extends Activity {
         @Override
         protected String doInBackground(Void... v) {
             //Log.d("Mylog", "UpdateTask listening0...");
-            while(!isCancelled()){
-                if(swapWorking) continue;
+            while(!isCancelled()) {
+                if(swapEnd) {
+                    SocketHandler.writeToSocket("SWAP_OK<END>");
+                    swapWorking = false;
+                    swapEnd = false;
+                    Log.d("Mylog", "swapWorking -> false");
+                    continue;
+                }
+                if(swapWorking) {
+                    Log.d("Mylog", "break!");
+                    break;
+                }
+                if(connectionTimeoutCount >= 11)
+                    break;
+
                 Log.d("Mylog", "UpdateTask listening...");
                 String result;
                 result = SocketHandler.getOutput();
                 publishProgress(result);
                 Log.d("Mylog", "result=" + result);
+                if (result == null || result.isEmpty() || result.equals(""))
+                    connectionTimeoutCount++;
+                else
+                    connectionTimeoutCount = 0;
+                //
+                try {
+                    Thread.sleep(90);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
             return null;
         }
         protected void onProgressUpdate(String... values) {
+            if(connectionTimeoutCount >= 10) {
+                Log.e("Mylog", "connect failed!");
+                AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+                dialog.setTitle("警告");
+                dialog.setMessage("伺服器無回應，程式即將關閉\n請嘗試重新連線或洽系統管理員");
+                dialog.setPositiveButton("OK",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialoginterface, int i) {
+                                android.os.Process.killProcess(android.os.Process.myPid());
+                                System.exit(1);
+                            }
+                        });
+                dialog.show();
+                return;
+            }
+
             String result = values[0];
             if(result.length() == 0) return;
             String[] lines = result.split("<END>");
             int length = lines.length;
 
-            Log.d("Mylog", "lines.length=" + length);
+            //Log.d("Mylog", "lines.length=" + length);
             boolean updateList = false;
             for(String s: lines) {
                 if(s != null && s.contains("MSG\t")) {
@@ -248,10 +289,10 @@ public class MainActivity extends Activity {
                     String[] items = s.split("\t");
                     if(items.length >= 2 && List_file != null) {
                         //TODO: update list
-                        for(int j=0; j<List_file.size(); j++){
+                        for(int j=0; j<List_file.size(); j++) {
                             if(List_file.get(j).productSerial.equals(items[0])) {
                                 List_file.get(j).itemCount = items[1];
-                                Log.d("mylog", "becomes: " + List_file.get(j).itemCount);
+                                //Log.d("mylog", "becomes: " + List_file.get(j).itemCount);
                                 myAdapter.notifyDataSetChanged();
                             }
                         }
@@ -273,12 +314,12 @@ public class MainActivity extends Activity {
                         if(single_item.length >= 4) {
                             updateList = true;
                             barcode_text = single_item[2];
+                            bname = single_item[1];
+                            brandName.setText(bname);
                             Log.d("Mylog", "barcode_text=" + barcode_text);
                             Bitmap bitmap = null;
                             try {
                                 bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 450, 100);
-                                //barcode.setImageBitmap(bitmap);
-                                //barcode.setScaleType(ImageView.ScaleType.CENTER);
                             } catch (WriterException e) {
                                 e.printStackTrace();
                             }
@@ -287,8 +328,9 @@ public class MainActivity extends Activity {
                         }
                     }
 
-                } else if(s!=null && s.contains("SWAP\t")) {
+                } else if(s!=null && s.contains("SWAP")) {
                     //s = s.replaceAll("SWAP\t", "");
+                    swapWorking = true;
                     Log.d("Mylog", "swap!!");
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
                     dialog.setTitle("警告");
@@ -313,26 +355,6 @@ public class MainActivity extends Activity {
             }
         }
     }
-
-    /*private static void setListViewHeightBasedOnChildren(ListView listView) {
-        ListAdapter listAdapter = listView.getAdapter();
-        if (listAdapter == null) {
-            // pre-condition
-            return;
-        }
-
-        int totalHeight = 0;
-        for (int i = 0; i < listAdapter.getCount(); i++) {
-            View listItem = listAdapter.getView(i, null, listView);
-            listItem.measure(0, 0);
-            totalHeight += listItem.getMeasuredHeight();
-        }
-
-        ViewGroup.LayoutParams params = listView.getLayoutParams();
-        params.height = totalHeight + (listView.getDividerHeight() * (listAdapter.getCount() - 1));
-        listView.setLayoutParams(params);
-        listView.requestLayout();
-    }*/
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
