@@ -312,6 +312,7 @@ public class MainActivity extends Activity {
                         String[] single_item = i.split("\t");
                         String barcode_text = "";
                         if(single_item.length >= 4) {
+                            //TODO: add pics
                             updateList = true;
                             barcode_text = single_item[2];
                             bname = single_item[1];
