@@ -23,6 +23,7 @@ import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
+import android.widget.TextClock;
 import android.widget.TextView;
 import com.google.zxing.WriterException;
 
@@ -34,7 +35,7 @@ public class MainActivity extends Activity {
     static final String SERVERIP = "140.113.167.14";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
-    private TextView connectState, swapTitle, brandName;
+    private TextView connectState, swapTitle, brandName, swapMsg;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
@@ -59,6 +60,8 @@ public class MainActivity extends Activity {
         mySeekBar.setEnabled(false);
         swapTitle = (TextView) findViewById(R.id.swapTitle);
         swapTitle.setText("目前無換牌指令");
+        swapMsg = (TextView) findViewById(R.id.swap_msg);
+        swapMsg.setVisibility(View.INVISIBLE);
         connected = false;
         swapWorking = false;
         swapEnd = false;
@@ -66,6 +69,8 @@ public class MainActivity extends Activity {
         brandName = (TextView) findViewById(R.id.brandName);
         firstlist = (ListView) findViewById(R.id.listView2);
         connectionTimeoutCount = 0;
+        //TextClock tc= (TextClock) findViewById(R.id.textClock);
+        //tc.setFormat24Hour();
 
         if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -114,7 +119,7 @@ public class MainActivity extends Activity {
     private void InitServer() {
         SocketHandler.closeSocket();
         SocketHandler.initSocket(SERVERIP, SERVERPORT);
-        String init = "CONNECT\tCM_1_M<END>";
+        String init = "CONNECT\tCM_3_M<END>";
         SocketHandler.writeToSocket(init);
         str1 = SocketHandler.getOutput();
         Log.d("Mylog", str1);
@@ -163,8 +168,7 @@ public class MainActivity extends Activity {
             connectState.setTextColor(getResources().getColor(R.color.red));
             connected = false;
         }
-        msg.setText("1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...1234567890wwwwwwwwwwwwwwwwwwwwww1234567890..." +
-                "1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...1234567890wwwwwwwwwwwwwwwwwwwwww1234567890...");
+        msg.setText("no message");
 
         /*String qrData = "Data I want to encode in QR code";
         try {
@@ -177,20 +181,23 @@ public class MainActivity extends Activity {
         mySeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
-                if(seekBar.getProgress() > SEEK_DEST) {
+                if (seekBar.getProgress() > SEEK_DEST) {
                     //TODO: apply change brand
-                    if(List_file != null)
+                    if (List_file != null)
                         List_file.clear();
                     myAdapter.notifyDataSetChanged();
                     swapTitle.setText("目前無換牌指令");
                     swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
+                    swapMsg.setText("");
+                    swapMsg.setVisibility(View.INVISIBLE);
                     seekBar.setProgress(5);
                     seekBar.setEnabled(false);
                     swapEnd = true;
+                    swapWorking = false;
                     bname = "";
                     brandName.setText(bname);
-                    if(task != null)
-                        task.cancel(true);
+                    //if (task != null)
+                    task.cancel(true);
                     task = new UpdateTask().execute();
                     Log.d("Mylog", "swap end.");
                     //swapWorking = false;
@@ -199,11 +206,13 @@ public class MainActivity extends Activity {
                     seekBar.setProgress(5);  //go back to zero
                 }
             }
+
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {  /* 開始拖動時觸發*/  }
+            public void onStartTrackingTouch(SeekBar seekBar) {  /* 開始拖動時觸發*/ }
+
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {  //進度改變時觸發  只要在拖動，就會重複觸發
-                if(progress > SEEK_DEST)
+                if (progress > SEEK_DEST)
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider_ok, null));
                 else
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
@@ -222,7 +231,9 @@ public class MainActivity extends Activity {
         protected String doInBackground(Void... v) {
             //Log.d("Mylog", "UpdateTask listening0...");
             while(!isCancelled()) {
+                //Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking);
                 if(swapEnd) {
+                    //Log.d("Mylog", "prepare to send SWAP OK");
                     SocketHandler.writeToSocket("SWAP_OK<END>");
                     swapWorking = false;
                     swapEnd = false;
@@ -230,7 +241,7 @@ public class MainActivity extends Activity {
                     continue;
                 }
                 if(swapWorking) {
-                    Log.d("Mylog", "break!");
+                    Log.e("Mylog", "break!");
                     break;
                 }
                 if(connectionTimeoutCount >= 11)
@@ -247,7 +258,7 @@ public class MainActivity extends Activity {
                     connectionTimeoutCount = 0;
                 //
                 try {
-                    Thread.sleep(90);
+                    Thread.sleep(80);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -272,14 +283,19 @@ public class MainActivity extends Activity {
             }
 
             String result = values[0];
-            if(result.length() == 0) return;
+            if(result==null ||result.length() == 0) return;
             String[] lines = result.split("<END>");
             int length = lines.length;
 
-            //Log.d("Mylog", "lines.length=" + length);
+            Log.d("Mylog", "lines.length=" + length);
             boolean updateList = false;
             for(String s: lines) {
-                if(s != null && s.contains("MSG\t")) {
+                Log.d("Mylog", "s in line=" + s);
+                if(s!=null && s.contains("SWAP_MSG\t")) {
+                    s = s.replaceAll("SWAP_MSG\t", "");
+                    swapMsg.setVisibility(View.VISIBLE);
+                    swapMsg.setText(s);
+                } else if(s!=null && s.contains("MSG\t")) {
                     s = s.replaceAll("MSG\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -298,26 +314,27 @@ public class MainActivity extends Activity {
                         }
                     }
                 } else if(s != null && s.contains("LIST\t")) {
-                    if(List_file != null) {
-                        List_file.clear();
-                        List_file = new ArrayList<ListItem>();
-                    } else
+                    //if(List_file != null) {
+                        //List_file.clear();
+                    //    List_file = new ArrayList<ListItem>();
+                    //} else
+                    if(List_file == null)
                         List_file = new ArrayList<ListItem>();
                     s = s.replaceAll("LIST\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     String[] items = s.split("\n");
                     for(String i: items){
-                        Log.d("Mylog",", line i=" + i);
+                        Log.d("Mylog","line i=" + i);
                         String[] single_item = i.split("\t");
                         String barcode_text = "";
-                        if(single_item.length >= 4) {
+                        if(single_item.length >= 5) {
                             //TODO: add pics
                             updateList = true;
                             barcode_text = single_item[2];
                             bname = single_item[1];
                             brandName.setText(bname);
-                            Log.d("Mylog", "barcode_text=" + barcode_text);
+                            //Log.d("Mylog", "barcode_text=" + barcode_text);
                             Bitmap bitmap = null;
                             try {
                                 bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 450, 100);
@@ -343,11 +360,17 @@ public class MainActivity extends Activity {
                                     swapTitle.setText("向右滑動切換品牌");
                                     swapTitle.setTextColor(getResources().getColor(R.color.black));
                                     swapWorking = true;
-                                    task.cancel(true);
+                                    Log.d("Mylog", "OK pressed");
+                                    //task.cancel(true);
                                 }
                             });
                     Log.d("Mylog", "prepare to show dialog...");
                     dialog.show();
+                } else if(s!=null && s.contains("LIST_EMPTY<END>")) {
+                    Log.d("Mylog", "clear!");
+                    if(List_file != null)
+                        List_file.clear();
+                    myAdapter.notifyDataSetChanged();
                 }
             }
             if(updateList) {

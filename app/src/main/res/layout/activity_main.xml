@@ -101,6 +101,26 @@
                     android:layout_alignBottom="@+id/tv11"
                     android:layout_marginStart="30dp"
                     android:textColor="#000000" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:text="Pre-swap mwssage goes here"
+                    android:id="@+id/swap_msg"
+                    android:layout_below="@+id/myseek"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="71dp" />
+
+                <TextClock
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/textClock"
+                    android:layout_alignParentBottom="true"
+                    android:layout_centerHorizontal="true"
+                    android:textSize="36sp"
+                    android:format24Hour="'現在時間 'MMM dd, aah:mm:ss"
+                    android:layout_marginBottom="36dp" />
             </RelativeLayout>
             <LinearLayout
                 android:layout_width="0dp"
