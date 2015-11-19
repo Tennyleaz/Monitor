@@ -19,10 +19,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.TextClock;
 import android.widget.TextView;
 import com.google.zxing.WriterException;
@@ -32,22 +34,24 @@ import java.util.HashMap;
 import java.util.List;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "140.113.167.14";
+    static final String SERVERIP = "192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
-    private TextView connectState, swapTitle, brandName, swapMsg;
+    private TextView connectState, swapTitle, brandName, swapMsg, workerID;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
-    private String str1, bname;
+    private String str1, bname, returnBrandName, returnWorkerID;
     private SeekBar mySeekBar;
     private boolean connected, swapWorking, swapEnd;
     private ListView mylist, firstlist;
     private ArrayAdapter<String> listAdapter;
     private MySimpleArrayAdapter myAdapter;
-    //private ArrayAdapter<String> listAdapter01;
+    private ArrayAdapter<String> productAdapter;
     private ArrayList<ListItem> List_file;
     private int connectionTimeoutCount;
+    private Spinner brandSelector;
+    private Button n1, n2, n3, n4, n5, n6, n7,n8, n9, n0, btn_enter, btn_delete;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,19 +62,59 @@ public class MainActivity extends Activity {
         mylist = (ListView) findViewById(R.id.listView);
         mySeekBar = (SeekBar) findViewById(R.id.myseek);
         mySeekBar.setEnabled(false);
+        mySeekBar.setVisibility(View.GONE);
         swapTitle = (TextView) findViewById(R.id.swapTitle);
         swapTitle.setText("目前無換牌指令");
         swapMsg = (TextView) findViewById(R.id.swap_msg);
         swapMsg.setVisibility(View.INVISIBLE);
+        workerID = (TextView) findViewById(R.id.workerID);
         connected = false;
         swapWorking = false;
         swapEnd = false;
-        //countTV = (TextView) findViewById(R.id.itemCount);.
         brandName = (TextView) findViewById(R.id.brandName);
         firstlist = (ListView) findViewById(R.id.listView2);
         connectionTimeoutCount = 0;
         //TextClock tc= (TextClock) findViewById(R.id.textClock);
         //tc.setFormat24Hour();
+        returnWorkerID = "";
+        brandSelector = (Spinner) findViewById(R.id.brandSelecter);
+        //ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.b_array, android.R.layout.simple_spinner_item);
+        //adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        //brandSelector.setAdapter(adapter);
+        brandSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+                returnBrandName = (String) parent.getItemAtPosition(pos);
+            }
+
+            public void onNothingSelected(AdapterView<?> parent) { /*Another interface callback*/
+                returnBrandName = null;
+            }
+        });
+        n0 = (Button) findViewById(R.id.int0);
+        n1 = (Button) findViewById(R.id.int1);
+        n2 = (Button) findViewById(R.id.int2);
+        n3 = (Button) findViewById(R.id.int3);
+        n4 = (Button) findViewById(R.id.int4);
+        n5 = (Button) findViewById(R.id.int5);
+        n6 = (Button) findViewById(R.id.int6);
+        n7 = (Button) findViewById(R.id.int7);
+        n8 = (Button) findViewById(R.id.int8);
+        n9 = (Button) findViewById(R.id.int9);
+        n0.setOnClickListener(numberListener);
+        n1.setOnClickListener(numberListener);
+        n2.setOnClickListener(numberListener);
+        n3.setOnClickListener(numberListener);
+        n4.setOnClickListener(numberListener);
+        n5.setOnClickListener(numberListener);
+        n6.setOnClickListener(numberListener);
+        n7.setOnClickListener(numberListener);
+        n8.setOnClickListener(numberListener);
+        n9.setOnClickListener(numberListener);
+        btn_enter = (Button) findViewById(R.id.btn_enter);
+        btn_enter.setOnClickListener(enterListener);
+        btn_enter.setEnabled(false);
+        btn_delete = (Button) findViewById(R.id.btn_del);
+        btn_delete.setOnClickListener(deleteListener);
 
         if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -119,10 +163,10 @@ public class MainActivity extends Activity {
     private void InitServer() {
         SocketHandler.closeSocket();
         SocketHandler.initSocket(SERVERIP, SERVERPORT);
-        String init = "CONNECT\tCM_3_M<END>";
+        String init = "CONNECT\tCM_1_M<END>";
         SocketHandler.writeToSocket(init);
         str1 = SocketHandler.getOutput();
-        Log.d("Mylog", str1);
+        //Log.d("Mylog", str1);
     }
 
     private boolean isNetworkConnected() {
@@ -158,31 +202,27 @@ public class MainActivity extends Activity {
     };
 
     private void updateUI() {
-        if(str1.contains("CONNECT_OK")) {
+        if(str1 != null && str1.contains("CONNECT_OK")) {
             connectState.setText("伺服器辨識成功");
             connectState.setTextColor(getResources().getColor(R.color.green));
             connected = true;
         }
         else {
-            connectState.setText(str1);
+            if(str1 != null) {
+                connectState.setText(str1);
+            } else {
+                connectState.setText("No Connection");
+            }
             connectState.setTextColor(getResources().getColor(R.color.red));
             connected = false;
         }
         msg.setText("no message");
 
-        /*String qrData = "Data I want to encode in QR code";
-        try {
-            Bitmap bitmap = OneDBarcode.encodeAsBitmap(qrData, 400, 150);
-            barcode.setImageBitmap(bitmap);
-        } catch (WriterException e) {
-            e.printStackTrace();
-        }*/
-
         mySeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
                 if (seekBar.getProgress() > SEEK_DEST) {
-                    //TODO: apply change brand
+                    //TODO: send ID and Brand
                     if (List_file != null)
                         List_file.clear();
                     myAdapter.notifyDataSetChanged();
@@ -196,8 +236,15 @@ public class MainActivity extends Activity {
                     swapWorking = false;
                     bname = "";
                     brandName.setText(bname);
-                    //if (task != null)
-                    task.cancel(true);
+                    mySeekBar.setVisibility(View.GONE);
+                    mySeekBar.setEnabled(false);
+                    btn_enter.setEnabled(false);
+                    returnWorkerID = "";
+                    workerID.setText(returnWorkerID);
+                    if (task != null) {
+                        Log.d("Mylog", "task is: " + task.getStatus());
+                        task.cancel(true);
+                    }
                     task = new UpdateTask().execute();
                     Log.d("Mylog", "swap end.");
                     //swapWorking = false;
@@ -226,15 +273,46 @@ public class MainActivity extends Activity {
         mylist.setAdapter(listAdapter);
     }
 
+    private View.OnClickListener deleteListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            if(returnWorkerID!=null && returnWorkerID.length()>0) {
+                returnWorkerID = returnWorkerID.substring(0, returnWorkerID.length() - 1);
+                workerID.setText(returnWorkerID);
+            }
+        }
+    };
+
+    private View.OnClickListener enterListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            Log.d("Mylog", "enter pressed, ID=" + returnWorkerID);
+            mySeekBar.setVisibility(View.VISIBLE);
+            mySeekBar.setEnabled(true);
+            swapTitle.setText("向右滑動切換品牌");
+            swapTitle.setTextColor(getResources().getColor(R.color.black));
+        }
+    };
+
+    private View.OnClickListener numberListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            Button b = (Button) v;
+            returnWorkerID += b.getText();
+            workerID.setText(returnWorkerID);
+        }
+    };
+
     private class UpdateTask extends AsyncTask<Void, String, String> {
         @Override
         protected String doInBackground(Void... v) {
             //Log.d("Mylog", "UpdateTask listening0...");
             while(!isCancelled()) {
-                //Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking);
+                Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking);
                 if(swapEnd) {
-                    //Log.d("Mylog", "prepare to send SWAP OK");
-                    SocketHandler.writeToSocket("SWAP_OK<END>");
+                    Log.d("Mylog", "prepare to send SWAP OK");
+                    String s = "SWAP_OK\t" + returnWorkerID +"<END>";
+                    SocketHandler.writeToSocket(s);
                     swapWorking = false;
                     swapEnd = false;
                     Log.d("Mylog", "swapWorking -> false");
@@ -258,7 +336,7 @@ public class MainActivity extends Activity {
                     connectionTimeoutCount = 0;
                 //
                 try {
-                    Thread.sleep(80);
+                    Thread.sleep(300);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -356,14 +434,17 @@ public class MainActivity extends Activity {
                     dialog.setPositiveButton("OK",
                             new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialoginterface, int i) {
+                                    /*mySeekBar.setVisibility(View.VISIBLE);
                                     mySeekBar.setEnabled(true);
                                     swapTitle.setText("向右滑動切換品牌");
-                                    swapTitle.setTextColor(getResources().getColor(R.color.black));
+                                    swapTitle.setTextColor(getResources().getColor(R.color.black));*/
                                     swapWorking = true;
+                                    btn_enter.setEnabled(true);
                                     Log.d("Mylog", "OK pressed");
                                     //task.cancel(true);
                                 }
                             });
+                    swapMsg.setText("請輸入品牌與員工ID");
                     Log.d("Mylog", "prepare to show dialog...");
                     dialog.show();
                 } else if(s!=null && s.contains("LIST_EMPTY<END>")) {

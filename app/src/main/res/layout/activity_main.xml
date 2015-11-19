@@ -108,9 +108,8 @@
                     android:textAppearance="?android:attr/textAppearanceLarge"
                     android:text="Pre-swap mwssage goes here"
                     android:id="@+id/swap_msg"
-                    android:layout_below="@+id/myseek"
-                    android:layout_centerHorizontal="true"
-                    android:layout_marginTop="71dp" />
+                    android:layout_above="@+id/textClock"
+                    android:layout_centerHorizontal="true" />
 
                 <TextClock
                     android:layout_width="wrap_content"
@@ -121,6 +120,147 @@
                     android:textSize="36sp"
                     android:format24Hour="'現在時間 'MMM dd, aah:mm:ss"
                     android:layout_marginBottom="36dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:text="員工ID: "
+                    android:id="@+id/textView4"
+                    android:layout_alignTop="@+id/textView5"
+                    android:layout_toEndOf="@+id/textView5"
+                    android:layout_marginStart="80dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:text="--------"
+                    android:id="@+id/workerID"
+                    android:layout_alignTop="@+id/textView4"
+                    android:layout_toEndOf="@+id/textView4" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1"
+                    android:id="@+id/int1"
+                    android:layout_below="@+id/textView4"
+                    android:layout_alignStart="@+id/textView4" />
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2"
+                    android:id="@+id/int2"
+                    android:layout_alignTop="@+id/int1"
+                    android:layout_toEndOf="@+id/int1" />
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3"
+                    android:id="@+id/int3"
+                    android:layout_alignTop="@+id/int2"
+                    android:layout_toEndOf="@+id/int2" />
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4"
+                    android:id="@+id/int4"
+                    android:layout_alignTop="@+id/int3"
+                    android:layout_toEndOf="@+id/int3" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="6"
+                    android:id="@+id/int6"
+                    android:layout_below="@+id/int1"
+                    android:layout_alignStart="@+id/int1" />
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="7"
+                    android:id="@+id/int7"
+                    android:layout_alignTop="@+id/int6"
+                    android:layout_toEndOf="@+id/int6" />
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="8"
+                    android:id="@+id/int8"
+                    android:layout_alignTop="@+id/int7"
+                    android:layout_toEndOf="@+id/int7" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="9"
+                    android:id="@+id/int9"
+                    android:layout_alignTop="@+id/int8"
+                    android:layout_toEndOf="@+id/int8" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:id="@+id/int0"
+                    android:layout_alignTop="@+id/int9"
+                    android:layout_toEndOf="@+id/int9" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="確定"
+                    android:id="@+id/btn_enter"
+                    android:layout_alignBaseline="@+id/int0"
+                    android:layout_alignBottom="@+id/int0"
+                    android:layout_toEndOf="@+id/int0" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="5"
+                    android:id="@+id/int5"
+                    android:layout_alignTop="@+id/int4"
+                    android:layout_toEndOf="@+id/int4" />
+
+                <Button
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="刪除"
+                    android:id="@+id/btn_del"
+                    android:layout_alignTop="@+id/int5"
+                    android:layout_toEndOf="@+id/int5" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:text="下個品牌:"
+                    android:id="@+id/textView5"
+                    android:layout_centerVertical="true"
+                    android:layout_alignStart="@+id/myseek" />
+
+                <Spinner
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/brandSelecter"
+                    android:layout_alignTop="@+id/int1"
+                    android:layout_alignStart="@+id/textView5"
+                    android:layout_toStartOf="@+id/int1" />
+
             </RelativeLayout>
             <LinearLayout
                 android:layout_width="0dp"
