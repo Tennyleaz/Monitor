@@ -25,6 +25,8 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
+import android.widget.TabHost;
+import android.widget.TabWidget;
 import android.widget.TextClock;
 import android.widget.TextView;
 import com.google.zxing.WriterException;
@@ -44,7 +46,7 @@ public class MainActivity extends Activity {
     private String str1, bname, returnBrandName, returnWorkerID;
     private SeekBar mySeekBar;
     private boolean connected, swapWorking, swapEnd;
-    private ListView mylist, firstlist;
+    private ListView firstlist;
     private ArrayAdapter<String> listAdapter;
     private MySimpleArrayAdapter myAdapter;
     private ArrayAdapter<String> productAdapter;
@@ -52,6 +54,7 @@ public class MainActivity extends Activity {
     private int connectionTimeoutCount;
     private Spinner brandSelector;
     private Button n1, n2, n3, n4, n5, n6, n7,n8, n9, n0, btn_enter, btn_delete;
+    private TabHost tabHost;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +62,6 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
-        mylist = (ListView) findViewById(R.id.listView);
         mySeekBar = (SeekBar) findViewById(R.id.myseek);
         mySeekBar.setEnabled(false);
         mySeekBar.setVisibility(View.GONE);
@@ -115,6 +117,26 @@ public class MainActivity extends Activity {
         btn_enter.setEnabled(false);
         btn_delete = (Button) findViewById(R.id.btn_del);
         btn_delete.setOnClickListener(deleteListener);
+
+        tabHost = (TabHost)findViewById(R.id.tabHost);
+        tabHost.setup();
+        TabHost.TabSpec spec=tabHost.newTabSpec("tab1");
+        spec.setContent(R.id.tab1layout);
+        spec.setIndicator("品 管");
+        tabHost.addTab(spec);
+        spec=tabHost.newTabSpec("tab2");
+        spec.setIndicator("數 量");
+        spec.setContent(R.id.tab2layout);
+        tabHost.addTab(spec);
+        tabHost.setCurrentTab(0);
+
+        TabWidget tabWidget = (TabWidget)tabHost.findViewById(android.R.id.tabs);
+        View tabView = tabWidget.getChildTabViewAt(0);
+        TextView tab = (TextView)tabView.findViewById(android.R.id.title);
+        tab.setTextSize(20);
+        tabView = tabWidget.getChildTabViewAt(1);
+        tab = (TextView)tabView.findViewById(android.R.id.title);
+        tab.setTextSize(20);
 
         if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -206,8 +228,7 @@ public class MainActivity extends Activity {
             connectState.setText("伺服器辨識成功");
             connectState.setTextColor(getResources().getColor(R.color.green));
             connected = true;
-        }
-        else {
+        } else {
             if(str1 != null) {
                 connectState.setText(str1);
             } else {
@@ -265,12 +286,6 @@ public class MainActivity extends Activity {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
             }
         });
-
-        listAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1);
-        listAdapter.add("111");
-        listAdapter.add("222");
-        listAdapter.add("333");
-        mylist.setAdapter(listAdapter);
     }
 
     private View.OnClickListener deleteListener = new View.OnClickListener() {
