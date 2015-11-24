@@ -16,29 +16,24 @@ import android.support.v4.content.res.ResourcesCompat;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TabHost;
 import android.widget.TabWidget;
-import android.widget.TextClock;
 import android.widget.TextView;
 import com.google.zxing.WriterException;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "192.168.1.30";
+    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
+    static final int MAX_LINE = 9;
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
@@ -46,15 +41,19 @@ public class MainActivity extends Activity {
     private String str1, bname, returnBrandName, returnWorkerID;
     private SeekBar mySeekBar;
     private boolean connected, swapWorking, swapEnd;
-    private ListView firstlist;
-    private ArrayAdapter<String> listAdapter;
+    private ListView firstlist, valueListView, boxListView;
     private MySimpleArrayAdapter myAdapter;
+    private ValueAdapter valueAdapter;
+    private ArrayList<ValueItem> valueArray;
+    private BoxAdapter boxAdapter;
+    private ArrayList<BoxItem> boxArray;
     private ArrayAdapter<String> productAdapter;
     private ArrayList<ListItem> List_file;
-    private int connectionTimeoutCount;
+    private int connectionTimeoutCount, boxRowCount;
     private Spinner brandSelector;
     private Button n1, n2, n3, n4, n5, n6, n7,n8, n9, n0, btn_enter, btn_delete;
     private TabHost tabHost;
+    //private TableLayout table1, table2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,6 +116,23 @@ public class MainActivity extends Activity {
         btn_enter.setEnabled(false);
         btn_delete = (Button) findViewById(R.id.btn_del);
         btn_delete.setOnClickListener(deleteListener);
+        //table1 = (TableLayout) findViewById(R.id.tab1table);
+        //table2 = (TableLayout) findViewById(R.id.tab2layout);
+        boxRowCount = 0;
+        valueListView = (ListView) findViewById(R.id.valueListView);
+        boxListView = (ListView) findViewById(R.id.boxListView);
+        valueArray = new ArrayList<ValueItem>();
+        boxArray = new ArrayList<BoxItem>();
+        valueAdapter = new ValueAdapter(MainActivity.this, valueArray);
+        boxAdapter = new BoxAdapter(MainActivity.this, boxArray);
+        valueListView.setAdapter(valueAdapter);
+        boxListView.setAdapter(boxAdapter);
+        //create 9 box lines
+        for (int i=1; i<=MAX_LINE; i++) {
+            BoxItem b = new BoxItem(String.valueOf(i), "No Data", "No Data");
+            boxArray.add(b);
+        }
+        boxAdapter.notifyDataSetChanged();
 
         tabHost = (TabHost)findViewById(R.id.tabHost);
         tabHost.setup();
@@ -185,7 +201,7 @@ public class MainActivity extends Activity {
     private void InitServer() {
         SocketHandler.closeSocket();
         SocketHandler.initSocket(SERVERIP, SERVERPORT);
-        String init = "CONNECT\tCM_1_M<END>";
+        String init = "CONNECT\tPM_1_M<END>";
         SocketHandler.writeToSocket(init);
         str1 = SocketHandler.getOutput();
         //Log.d("Mylog", str1);
@@ -243,7 +259,6 @@ public class MainActivity extends Activity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
                 if (seekBar.getProgress() > SEEK_DEST) {
-                    //TODO: send ID and Brand
                     if (List_file != null)
                         List_file.clear();
                     myAdapter.notifyDataSetChanged();
@@ -422,7 +437,6 @@ public class MainActivity extends Activity {
                         String[] single_item = i.split("\t");
                         String barcode_text = "";
                         if(single_item.length >= 5) {
-                            //TODO: add pics
                             updateList = true;
                             barcode_text = single_item[2];
                             bname = single_item[1];
@@ -467,6 +481,37 @@ public class MainActivity extends Activity {
                     if(List_file != null)
                         List_file.clear();
                     myAdapter.notifyDataSetChanged();
+                } else if(s!=null && s.contains("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
+                    s = s.replaceAll("UPDATE_BOX\t", "");
+                    s = s.replaceAll("<N>", "\n");
+                    s = s.replaceAll("<END>", "");
+                    String[] items = s.split("\n");
+                    for(String i: items) {
+                        Log.d("Mylog","line i=" + i);
+                        String[] single_item = i.split("\t");
+                        if(single_item.length >= 3) {
+                            int lineNumber = Integer.parseInt(single_item[0]) - 1;
+                            BoxItem b = new BoxItem(single_item[0], single_item[1], single_item[2]);
+                            boxArray.set(lineNumber, b);
+                        }
+                    }
+                    boxAdapter.notifyDataSetChanged();
+                } else if(s!=null && s.contains("UPDATE_VALUE\t")) {  //時間\t線號\t品牌名稱\t重量max\t重量value\t重量min\t圓周max\t圓周value\t圓周min\t透氣率max\t透氣率value\t透氣率min
+                    s = s.replaceAll("UPDATE_VALUE\t", "");
+                    s = s.replaceAll("<N>", "\n");
+                    s = s.replaceAll("<END>", "");
+                    String[] items = s.split("\n");
+                    valueArray.clear();
+                    for(String i: items) {
+                        Log.d("Mylog","line i=" + i);
+                        String[] single_item = i.split("\t");
+                        if(single_item.length >= 12) {
+                            String name = single_item[1] + " " + single_item[2];
+                            ValueItem v = new ValueItem(name, single_item[3], single_item[4], single_item[5], single_item[6], single_item[7], single_item[8], single_item[9], single_item[10], single_item[11]);
+                            valueArray.add(v);
+                        }
+                    }
+                    valueAdapter.notifyDataSetChanged();
                 }
             }
             if(updateList) {
