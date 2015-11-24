@@ -40,7 +40,7 @@ public class MainActivity extends Activity {
     private AsyncTask task = null;
     private String str1, bname, returnBrandName, returnWorkerID;
     private SeekBar mySeekBar;
-    private boolean connected, swapWorking, swapEnd;
+    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking;
     private ListView firstlist, valueListView, boxListView;
     private MySimpleArrayAdapter myAdapter;
     private ValueAdapter valueAdapter;
@@ -72,6 +72,7 @@ public class MainActivity extends Activity {
         connected = false;
         swapWorking = false;
         swapEnd = false;
+        bc_msg_reply = false;
         brandName = (TextView) findViewById(R.id.brandName);
         firstlist = (ListView) findViewById(R.id.listView2);
         connectionTimeoutCount = 0;
@@ -129,10 +130,13 @@ public class MainActivity extends Activity {
         boxListView.setAdapter(boxAdapter);
         //create 9 box lines
         for (int i=1; i<=MAX_LINE; i++) {
-            BoxItem b = new BoxItem(String.valueOf(i), "No Data", "No Data");
+            BoxItem b = new BoxItem(String.valueOf(i), "0", "0");
             boxArray.add(b);
+            ValueItem v = new ValueItem("(無)", "0", "0", "0", "0", "0", "0", "0", "0", "0", "");
+            valueArray.add(v);
         }
         boxAdapter.notifyDataSetChanged();
+        valueAdapter.notifyDataSetChanged();
 
         tabHost = (TabHost)findViewById(R.id.tabHost);
         tabHost.setup();
@@ -338,7 +342,7 @@ public class MainActivity extends Activity {
         protected String doInBackground(Void... v) {
             //Log.d("Mylog", "UpdateTask listening0...");
             while(!isCancelled()) {
-                Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking);
+                Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
                 if(swapEnd) {
                     Log.d("Mylog", "prepare to send SWAP OK");
                     String s = "SWAP_OK\t" + returnWorkerID +"<END>";
@@ -354,6 +358,16 @@ public class MainActivity extends Activity {
                 }
                 if(connectionTimeoutCount >= 11)
                     break;
+                if(bc_msg_reply) {
+                    Log.d("Mylog", "to send BC_MSG_OK<END>");
+                    String s = "BC_MSG_OK<END>";
+                    SocketHandler.writeToSocket(s);
+                    bc_msg_reply = false;
+                    bc_msgWorking = false;
+                    Log.d("Mylog", "BC_MSG_OK");
+                }
+                if(bc_msgWorking)
+                    continue;
 
                 Log.d("Mylog", "UpdateTask listening...");
                 String result;
@@ -403,6 +417,22 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("SWAP_MSG\t", "");
                     swapMsg.setVisibility(View.VISIBLE);
                     swapMsg.setText(s);
+                } else if(s!=null && s.contains("BC_MSG")) {  //廣播
+                    bc_msgWorking = true;
+                    Log.d("mylog", "inside BC_MSG");
+                    s = s.replaceAll("BC_MSG\t", "");
+                    AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+                    dialog.setTitle("廣播");
+                    dialog.setMessage(s);
+                    dialog.setPositiveButton("OK",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialoginterface, int i) {
+                                    //send BC_MSG_OK<END>
+                                    bc_msg_reply = true;
+                                }
+                            });
+                    dialog.setCancelable(false);
+                    dialog.show();
                 } else if(s!=null && s.contains("MSG\t")) {
                     s = s.replaceAll("MSG\t", "");
                     s = s.replaceAll("<N>", "\n");
@@ -501,14 +531,15 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     String[] items = s.split("\n");
-                    valueArray.clear();
                     for(String i: items) {
                         Log.d("Mylog","line i=" + i);
                         String[] single_item = i.split("\t");
                         if(single_item.length >= 12) {
-                            String name = single_item[1] + " " + single_item[2];
-                            ValueItem v = new ValueItem(name, single_item[3], single_item[4], single_item[5], single_item[6], single_item[7], single_item[8], single_item[9], single_item[10], single_item[11]);
-                            valueArray.add(v);
+                            int lineNumber = Integer.parseInt(single_item[1]) - 1;
+                            String name = "生產線" + single_item[1] + " " + single_item[2];
+                            String time = "最後更新: " + single_item[0];
+                            ValueItem v = new ValueItem(name, single_item[3], single_item[4], single_item[5], single_item[6], single_item[7], single_item[8], single_item[9], single_item[10], single_item[11], time);
+                            valueArray.set(lineNumber, v);
                         }
                     }
                     valueAdapter.notifyDataSetChanged();

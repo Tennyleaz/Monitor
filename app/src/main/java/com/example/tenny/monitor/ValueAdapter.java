@@ -16,7 +16,7 @@ public class ValueAdapter extends ArrayAdapter<ValueItem> {
     }
 
     static class ItemHolder {
-        public TextView weight, maxWeight, minWeight, radius, maxRadius, minRadius, resist, maxResist, minResist, brandName;
+        public TextView weight, maxWeight, minWeight, radius, maxRadius, minRadius, resist, maxResist, minResist, brandName, time;
     }
 
     @Override
@@ -36,6 +36,7 @@ public class ValueAdapter extends ArrayAdapter<ValueItem> {
             viewHolder.maxResist = (TextView) convertView.findViewById(R.id.maxResist);
             viewHolder.minResist = (TextView) convertView.findViewById(R.id.minResist);
             viewHolder.brandName = (TextView) convertView.findViewById(R.id.brandName);
+            viewHolder.time = (TextView) convertView.findViewById(R.id.time);
             convertView.setTag(viewHolder);
         } else {
             viewHolder = (ItemHolder) convertView.getTag();
@@ -50,6 +51,7 @@ public class ValueAdapter extends ArrayAdapter<ValueItem> {
         viewHolder.maxResist.setText(i.MaxResist);
         viewHolder.minResist.setText(i.MinResist);
         viewHolder.brandName.setText(i.name);
+        viewHolder.time.setText(i.time);
         changeColor(viewHolder.weight, i.MaxWeight, i.MinWeight, i.Weight);
         changeColor(viewHolder.radius, i.MaxRadius, i.MinRadius, i.Radius);
         changeColor(viewHolder.resist, i.MaxResist, i.MinResist, i.Resist);
