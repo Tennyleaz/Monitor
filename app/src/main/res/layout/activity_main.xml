@@ -137,111 +137,124 @@
                     android:text="--------"
                     android:id="@+id/workerID"
                     android:layout_alignTop="@+id/textView4"
-                    android:layout_toEndOf="@+id/textView4" />
+                    android:layout_toEndOf="@+id/textView4"
+                    android:singleLine="true"
+                    android:maxLength="7" />
 
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="1"
                     android:id="@+id/int1"
                     android:layout_below="@+id/textView4"
-                    android:layout_alignStart="@+id/textView4" />
+                    android:layout_alignStart="@+id/textView4"
+                    android:textSize="20dp" />
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="2"
                     android:id="@+id/int2"
                     android:layout_alignTop="@+id/int1"
-                    android:layout_toEndOf="@+id/int1" />
+                    android:layout_toEndOf="@+id/int1"
+                    android:textSize="20dp" />
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="3"
                     android:id="@+id/int3"
                     android:layout_alignTop="@+id/int2"
-                    android:layout_toEndOf="@+id/int2" />
+                    android:layout_toEndOf="@+id/int2"
+                    android:textSize="20dp" />
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="4"
                     android:id="@+id/int4"
                     android:layout_alignTop="@+id/int3"
-                    android:layout_toEndOf="@+id/int3" />
+                    android:layout_toEndOf="@+id/int3"
+                    android:textSize="20dp" />
 
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="6"
                     android:id="@+id/int6"
                     android:layout_below="@+id/int1"
-                    android:layout_alignStart="@+id/int1" />
+                    android:layout_alignStart="@+id/int1"
+                    android:textSize="20dp" />
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="7"
                     android:id="@+id/int7"
                     android:layout_alignTop="@+id/int6"
-                    android:layout_toEndOf="@+id/int6" />
+                    android:layout_toEndOf="@+id/int6"
+                    android:textSize="20dp" />
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="8"
                     android:id="@+id/int8"
                     android:layout_alignTop="@+id/int7"
-                    android:layout_toEndOf="@+id/int7" />
+                    android:layout_toEndOf="@+id/int7"
+                    android:textSize="20dp" />
 
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="9"
                     android:id="@+id/int9"
                     android:layout_alignTop="@+id/int8"
-                    android:layout_toEndOf="@+id/int8" />
+                    android:layout_toEndOf="@+id/int8"
+                    android:textSize="20dp" />
 
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="0"
                     android:id="@+id/int0"
                     android:layout_alignTop="@+id/int9"
-                    android:layout_toEndOf="@+id/int9" />
+                    android:layout_toEndOf="@+id/int9"
+                    android:textSize="20dp" />
 
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="確定"
                     android:id="@+id/btn_enter"
-                    android:layout_alignBaseline="@+id/int0"
-                    android:layout_alignBottom="@+id/int0"
-                    android:layout_toEndOf="@+id/int0" />
+                    android:layout_alignTop="@+id/int0"
+                    android:layout_toEndOf="@+id/int0"
+                    android:textSize="18dp" />
 
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="5"
                     android:id="@+id/int5"
                     android:layout_alignTop="@+id/int4"
-                    android:layout_toEndOf="@+id/int4" />
+                    android:layout_toEndOf="@+id/int4"
+                    android:textSize="20dp" />
 
                 <Button
                     style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:text="刪除"
                     android:id="@+id/btn_del"
                     android:layout_alignTop="@+id/int5"
-                    android:layout_toEndOf="@+id/int5" />
+                    android:layout_toEndOf="@+id/int5"
+                    android:textSize="18dp" />
 
                 <TextView
                     android:layout_width="wrap_content"

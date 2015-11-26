@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -17,7 +18,6 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SeekBar;
@@ -40,19 +40,21 @@ public class MainActivity extends Activity {
     private AsyncTask task = null;
     private String str1, bname, returnBrandName, returnWorkerID;
     private SeekBar mySeekBar;
-    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking;
+    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false;
     private ListView firstlist, valueListView, boxListView;
     private MySimpleArrayAdapter myAdapter;
     private ValueAdapter valueAdapter;
     private ArrayList<ValueItem> valueArray;
     private BoxAdapter boxAdapter;
     private ArrayList<BoxItem> boxArray;
-    private ArrayAdapter<String> productAdapter;
+    //private ArrayAdapter<String> productAdapter;
     private ArrayList<ListItem> List_file;
-    private int connectionTimeoutCount, boxRowCount;
+    private int connectionTimeoutCount;
     private Spinner brandSelector;
     private Button n1, n2, n3, n4, n5, n6, n7,n8, n9, n0, btn_enter, btn_delete;
     private TabHost tabHost;
+    AlertDialog dialog;
+    static boolean active = false;
     //private TableLayout table1, table2;
 
     @Override
@@ -73,6 +75,7 @@ public class MainActivity extends Activity {
         swapWorking = false;
         swapEnd = false;
         bc_msg_reply = false;
+        bc_msgWorking = false;
         brandName = (TextView) findViewById(R.id.brandName);
         firstlist = (ListView) findViewById(R.id.listView2);
         connectionTimeoutCount = 0;
@@ -119,7 +122,7 @@ public class MainActivity extends Activity {
         btn_delete.setOnClickListener(deleteListener);
         //table1 = (TableLayout) findViewById(R.id.tab1table);
         //table2 = (TableLayout) findViewById(R.id.tab2layout);
-        boxRowCount = 0;
+        //boxRowCount = 0;
         valueListView = (ListView) findViewById(R.id.valueListView);
         boxListView = (ListView) findViewById(R.id.boxListView);
         valueArray = new ArrayList<ValueItem>();
@@ -153,10 +156,10 @@ public class MainActivity extends Activity {
         TabWidget tabWidget = (TabWidget)tabHost.findViewById(android.R.id.tabs);
         View tabView = tabWidget.getChildTabViewAt(0);
         TextView tab = (TextView)tabView.findViewById(android.R.id.title);
-        tab.setTextSize(20);
+        tab.setTextSize(24);
         tabView = tabWidget.getChildTabViewAt(1);
         tab = (TextView)tabView.findViewById(android.R.id.title);
-        tab.setTextSize(20);
+        tab.setTextSize(24);
 
         if(!isNetworkConnected()) {  //close when not connected
             AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
@@ -205,7 +208,7 @@ public class MainActivity extends Activity {
     private void InitServer() {
         SocketHandler.closeSocket();
         SocketHandler.initSocket(SERVERIP, SERVERPORT);
-        String init = "CONNECT\tPM_1_M<END>";
+        String init = "CONNECT\tPM_9_M<END>";
         SocketHandler.writeToSocket(init);
         str1 = SocketHandler.getOutput();
         //Log.d("Mylog", str1);
@@ -229,17 +232,40 @@ public class MainActivity extends Activity {
         @Override
         public void handleMessage(Message msg) {// handler接收到消息後就會執行此方法
             pd.dismiss();// 關閉ProgressDialog
-            AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
-            dialog.setTitle("警告");
-            dialog.setMessage("伺服器無回應，程式即將關閉\n請嘗試重新連線或洽系統管理員");
-            dialog.setPositiveButton("OK",
-                    new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialoginterface, int i) {
-                            android.os.Process.killProcess(android.os.Process.myPid());
-                            System.exit(1);
-                        }
-                    });
-            dialog.show();
+            Log.e("Mylog", "ServerDownHandler: connect failed!");
+            if(dialog!=null && dialog.isShowing()) return;
+            if(active) {
+                dialog = new AlertDialog.Builder(MainActivity.this).create();
+                dialog.setTitle("警告");
+                dialog.setMessage("伺服器無回應，\n5秒後自動重新連線，若問題持續請洽系統管理員");
+                dialog.setButton("關閉程式",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialoginterface, int i) {
+                                android.os.Process.killProcess(android.os.Process.myPid());
+                                System.exit(1);
+                                Log.d("mylog", "to finish task...");
+                            }
+                        });
+                dialog.show();
+            }
+            notOnstop = true;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d("mylog", "wait 5000ms");
+                    try { Thread.sleep(5000); }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                        Log.e("mylog", "InterruptedException e=" + e);
+                    }
+                    if(dialog!=null && dialog.isShowing())
+                        dialog.cancel();
+                    Intent intent = new Intent(MainActivity.this, MainActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                }
+            }).start();
+            return;
         }
     };
 
@@ -279,8 +305,8 @@ public class MainActivity extends Activity {
                     mySeekBar.setVisibility(View.GONE);
                     mySeekBar.setEnabled(false);
                     btn_enter.setEnabled(false);
-                    returnWorkerID = "";
-                    workerID.setText(returnWorkerID);
+                    //returnWorkerID = "";
+                    workerID.setText("");
                     if (task != null) {
                         Log.d("Mylog", "task is: " + task.getStatus());
                         task.cancel(true);
@@ -331,9 +357,11 @@ public class MainActivity extends Activity {
     private View.OnClickListener numberListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            Button b = (Button) v;
-            returnWorkerID += b.getText();
-            workerID.setText(returnWorkerID);
+            if(returnWorkerID.length() < 7) {
+                Button b = (Button) v;
+                returnWorkerID += b.getText();
+                workerID.setText(returnWorkerID);
+            }
         }
     };
 
@@ -344,11 +372,12 @@ public class MainActivity extends Activity {
             while(!isCancelled()) {
                 Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
                 if(swapEnd) {
-                    Log.d("Mylog", "prepare to send SWAP OK");
+                    Log.d("Mylog", "prepare to send SWAP OK, ID=" +  returnWorkerID);
                     String s = "SWAP_OK\t" + returnWorkerID +"<END>";
                     SocketHandler.writeToSocket(s);
                     swapWorking = false;
                     swapEnd = false;
+                    returnWorkerID = "";
                     Log.d("Mylog", "swapWorking -> false");
                     continue;
                 }
@@ -369,7 +398,7 @@ public class MainActivity extends Activity {
                 if(bc_msgWorking)
                     continue;
 
-                Log.d("Mylog", "UpdateTask listening...");
+                Log.e("Mylog", "UpdateTask listening...");
                 String result;
                 result = SocketHandler.getOutput();
                 publishProgress(result);
@@ -380,7 +409,7 @@ public class MainActivity extends Activity {
                     connectionTimeoutCount = 0;
                 //
                 try {
-                    Thread.sleep(300);
+                    Thread.sleep(400);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -390,17 +419,38 @@ public class MainActivity extends Activity {
         protected void onProgressUpdate(String... values) {
             if(connectionTimeoutCount >= 10) {
                 Log.e("Mylog", "connect failed!");
-                AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
-                dialog.setTitle("警告");
-                dialog.setMessage("伺服器無回應，程式即將關閉\n請嘗試重新連線或洽系統管理員");
-                dialog.setPositiveButton("OK",
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialoginterface, int i) {
-                                android.os.Process.killProcess(android.os.Process.myPid());
-                                System.exit(1);
-                            }
-                        });
-                dialog.show();
+                if(dialog!=null && dialog.isShowing()) return;
+                if(active) {
+                    dialog = new AlertDialog.Builder(MainActivity.this).create();
+                    dialog.setTitle("警告");
+                    dialog.setMessage("伺服器無回應，\n5秒後自動重新連線，若問題持續請洽系統管理員");
+                    dialog.setButton("關閉程式",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialoginterface, int i) {
+                                    android.os.Process.killProcess(android.os.Process.myPid());
+                                    System.exit(1);
+                                    Log.d("mylog", "to finish task...");
+                                }
+                            });
+                    dialog.show();
+                }
+                notOnstop = true;
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.d("mylog", "wait 5000ms");
+                        try { Thread.sleep(5000); }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                            Log.e("mylog", "InterruptedException e=" + e);
+                        }
+                        if(dialog!=null && dialog.isShowing())
+                            dialog.cancel();
+                        Intent intent = new Intent(MainActivity.this, MainActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                    }
+                }).start();
                 return;
             }
 
@@ -422,6 +472,7 @@ public class MainActivity extends Activity {
                     Log.d("mylog", "inside BC_MSG");
                     s = s.replaceAll("BC_MSG\t", "");
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+                    dialog = new AlertDialog.Builder(MainActivity.this);
                     dialog.setTitle("廣播");
                     dialog.setMessage(s);
                     dialog.setPositiveButton("OK",
@@ -567,11 +618,21 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    public void onStop(){
-        System.exit(0);
-        task.cancel(true);
-        SocketHandler.closeSocket();
-        finish();
+    public void onStart() {
+        super.onStart();
+        active = true;
+    }
+
+    @Override
+    public void onStop() {
+        if(!notOnstop) {
+            Log.d("mylog", "onStop is called");
+            System.exit(0);
+            task.cancel(true);
+            SocketHandler.closeSocket();
+            finish();
+        }
+        active = false;
         super.onStop();
     }
 }

@@ -59,9 +59,9 @@ public class ValueAdapter extends ArrayAdapter<ValueItem> {
     }
 
     private void changeColor(TextView v, String max, String min, String value) {
-        if (Double.parseDouble(value) > Double.parseDouble(max)) {
+        if ((Double.parseDouble(value) > Double.parseDouble(max)*1.02) || (Double.parseDouble(value) < Double.parseDouble(min)*0.98)) {
             v.setTextColor(Color.parseColor("#f44336")); //red
-        } else if (Double.parseDouble(value) < Double.parseDouble(min)) {
+        } else if ((Double.parseDouble(value) > Double.parseDouble(max)) || (Double.parseDouble(value) < Double.parseDouble(min))) {
             v.setTextColor(Color.parseColor("#412dff")); //blue
         } else {
             v.setTextColor(Color.parseColor("#4caf50")); //green
