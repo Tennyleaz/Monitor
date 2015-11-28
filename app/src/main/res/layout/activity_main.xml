@@ -262,7 +262,8 @@
                     android:textAppearance="?android:attr/textAppearanceLarge"
                     android:text="下個品牌:"
                     android:id="@+id/textView5"
-                    android:layout_centerVertical="true"
+                    android:layout_alignParentBottom="true"
+                    android:layout_marginBottom="300dp"
                     android:layout_alignStart="@+id/myseek" />
 
                 <Spinner

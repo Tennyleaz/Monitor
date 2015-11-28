@@ -6,6 +6,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -30,10 +31,12 @@ import com.google.zxing.WriterException;
 import java.util.ArrayList;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
+    static String BOARD_ID = "PM_1_M";
+
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
@@ -61,6 +64,10 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        final SharedPreferences settings = getApplicationContext().getSharedPreferences("EC510", 0);
+        BOARD_ID = settings.getString("board_name", "CM") + "_" + settings.getString("board_ID", "1") + "_M";
+        Log.d("mylog", "BOARD_ID=" + BOARD_ID);
+
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
         mySeekBar = (SeekBar) findViewById(R.id.myseek);
@@ -175,8 +182,18 @@ public class MainActivity extends Activity {
             dialog.show();
             Log.e("Mylog", "no network");
         }
-        else {
-            pd = ProgressDialog.show(MainActivity.this, "連線中", "Please wait...");    /* 開啟一個新線程，在新線程裡執行耗時的方法 */
+        else {  /* 開啟一個新線程，在新線程裡執行耗時的方法 */
+            pd = new ProgressDialog(MainActivity.this);
+            pd.setTitle("連線中");
+            pd.setMessage("Please wait...");
+            pd.setCancelable(false);
+            /*pd.setButton(DialogInterface.BUTTON_NEUTRAL, "更改ID...", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    //dialog.dismiss();
+                }
+            });*/
+            pd.show();
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -208,7 +225,7 @@ public class MainActivity extends Activity {
     private void InitServer() {
         SocketHandler.closeSocket();
         SocketHandler.initSocket(SERVERIP, SERVERPORT);
-        String init = "CONNECT\tPM_9_M<END>";
+        String init = "CONNECT\t" + BOARD_ID + "<END>";
         SocketHandler.writeToSocket(init);
         str1 = SocketHandler.getOutput();
         //Log.d("Mylog", str1);
@@ -376,7 +393,7 @@ public class MainActivity extends Activity {
                     String s = "SWAP_OK\t" + returnWorkerID +"<END>";
                     SocketHandler.writeToSocket(s);
                     swapWorking = false;
-                    swapEnd = false;
+                    swapEnd = false;  //TODO: check if ID is correct
                     returnWorkerID = "";
                     Log.d("Mylog", "swapWorking -> false");
                     continue;
@@ -493,7 +510,6 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("UPDATE_LIST\t", "");
                     String[] items = s.split("\t");
                     if(items.length >= 2 && List_file != null) {
-                        //TODO: update list
                         for(int j=0; j<List_file.size(); j++) {
                             if(List_file.get(j).productSerial.equals(items[0])) {
                                 List_file.get(j).itemCount = items[1];
@@ -613,6 +629,26 @@ public class MainActivity extends Activity {
             Log.d("Mylog", "back is pressed2");
             task.cancel(true);
             finish();
+        }
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            notOnstop = true;
+            active = false;
+            if(task!=null)
+                task.cancel(true);
+            SocketHandler.closeSocket();
+            if(pd!=null)
+                pd.dismiss();
+            Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+            Thread.enumerate(threads);
+            for (Thread t : threads) {
+                t.interrupt();
+            }
+            Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
+            Intent intent = new Intent(MainActivity.this, ChangeID.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return true;
         }
         return super.onKeyDown(keyCode, event);
     }
