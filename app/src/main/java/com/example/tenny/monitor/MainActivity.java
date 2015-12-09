@@ -31,11 +31,11 @@ import com.google.zxing.WriterException;
 import java.util.ArrayList;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static String BOARD_ID = "PM_1_M";
+    static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
     private ScrollForeverTextView msg;
@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
     private TabHost tabHost;
     AlertDialog dialog;
     static boolean active = false;
-    //private TableLayout table1, table2;
+    private static int rebootCount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +67,13 @@ public class MainActivity extends Activity {
         final SharedPreferences settings = getApplicationContext().getSharedPreferences("EC510", 0);
         BOARD_ID = settings.getString("board_name", "CM") + "_" + settings.getString("board_ID", "1") + "_M";
         Log.d("mylog", "BOARD_ID=" + BOARD_ID);
+        TextView board_id = (TextView) findViewById(R.id.board_id);
+        if(BOARD_ID.contains("CM"))
+            board_id.setText("捲包機" + settings.getString("board_ID", "1"));
+        else if(BOARD_ID.contains("PM"))
+            board_id.setText("包裝機" + settings.getString("board_ID", "1"));
+        else
+            board_id.setText("裝箱機" + settings.getString("board_ID", "1"));
 
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
@@ -169,10 +176,10 @@ public class MainActivity extends Activity {
         tab.setTextSize(24);
 
         if(!isNetworkConnected()) {  //close when not connected
-            AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+            dialog = new AlertDialog.Builder(MainActivity.this).create();
             dialog.setTitle("警告");
             dialog.setMessage("無網路連線,\n程式即將關閉");
-            dialog.setPositiveButton("OK",
+            dialog.setButton("OK",
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialoginterface, int i) {
                             android.os.Process.killProcess(android.os.Process.myPid());
@@ -183,6 +190,7 @@ public class MainActivity extends Activity {
             Log.e("Mylog", "no network");
         }
         else {  /* 開啟一個新線程，在新線程裡執行耗時的方法 */
+            rebootCount = 0;
             pd = new ProgressDialog(MainActivity.this);
             pd.setTitle("連線中");
             pd.setMessage("Please wait...");
@@ -277,6 +285,7 @@ public class MainActivity extends Activity {
                     }
                     if(dialog!=null && dialog.isShowing())
                         dialog.cancel();
+                    active = false;
                     Intent intent = new Intent(MainActivity.this, MainActivity.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
@@ -631,23 +640,26 @@ public class MainActivity extends Activity {
             finish();
         }
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            notOnstop = true;
-            active = false;
-            if(task!=null)
-                task.cancel(true);
-            SocketHandler.closeSocket();
-            if(pd!=null)
-                pd.dismiss();
-            Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
-            Thread.enumerate(threads);
-            for (Thread t : threads) {
-                t.interrupt();
+            rebootCount++;
+            if(rebootCount > 3) {
+                notOnstop = true;
+                active = false;
+                if (task != null)
+                    task.cancel(true);
+                SocketHandler.closeSocket();
+                if (pd != null)
+                    pd.dismiss();
+                Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+                Thread.enumerate(threads);
+                for (Thread t : threads) {
+                    t.interrupt();
+                }
+                Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
+                Intent intent = new Intent(MainActivity.this, ChangeID.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
             }
-            Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
-            Intent intent = new Intent(MainActivity.this, ChangeID.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
             return true;
         }
         return super.onKeyDown(keyCode, event);
