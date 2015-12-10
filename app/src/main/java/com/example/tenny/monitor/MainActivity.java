@@ -19,6 +19,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SeekBar;
@@ -41,16 +42,17 @@ public class MainActivity extends Activity {
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
-    private String str1, bname, returnBrandName, returnWorkerID;
+    private String str1, bname, returnWorkerID, tempSwapMessage;
     private SeekBar mySeekBar;
-    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false;
+    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false, swapOK=false;
     private ListView firstlist, valueListView, boxListView;
     private MySimpleArrayAdapter myAdapter;
     private ValueAdapter valueAdapter;
     private ArrayList<ValueItem> valueArray;
     private BoxAdapter boxAdapter;
     private ArrayList<BoxItem> boxArray;
-    //private ArrayAdapter<String> productAdapter;
+    private ArrayList<String> nextBrandArray;
+    private ArrayAdapter<String> nextBrandAdapter;
     private ArrayList<ListItem> List_file;
     private int connectionTimeoutCount;
     private Spinner brandSelector;
@@ -59,6 +61,7 @@ public class MainActivity extends Activity {
     AlertDialog dialog;
     static boolean active = false;
     private static int rebootCount;
+    private int returnBrandName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,20 +96,21 @@ public class MainActivity extends Activity {
         brandName = (TextView) findViewById(R.id.brandName);
         firstlist = (ListView) findViewById(R.id.listView2);
         connectionTimeoutCount = 0;
+        tempSwapMessage = null;
         //TextClock tc= (TextClock) findViewById(R.id.textClock);
         //tc.setFormat24Hour();
         returnWorkerID = "";
         brandSelector = (Spinner) findViewById(R.id.brandSelecter);
-        //ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.b_array, android.R.layout.simple_spinner_item);
-        //adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        //brandSelector.setAdapter(adapter);
+        nextBrandArray = new ArrayList<String>();
+        nextBrandArray.add("(無)");
+        nextBrandAdapter = new ArrayAdapter<String>(MainActivity.this,  android.R.layout.simple_spinner_dropdown_item, nextBrandArray);
+        brandSelector.setAdapter(nextBrandAdapter);
         brandSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-                returnBrandName = (String) parent.getItemAtPosition(pos);
+                returnBrandName = pos;
             }
-
-            public void onNothingSelected(AdapterView<?> parent) { /*Another interface callback*/
-                returnBrandName = null;
+            public void onNothingSelected(AdapterView<?> parent) {
+                returnBrandName = 0;
             }
         });
         n0 = (Button) findViewById(R.id.int0);
@@ -149,7 +153,7 @@ public class MainActivity extends Activity {
         for (int i=1; i<=MAX_LINE; i++) {
             BoxItem b = new BoxItem(String.valueOf(i), "0", "0");
             boxArray.add(b);
-            ValueItem v = new ValueItem("(無)", "0", "0", "0", "0", "0", "0", "0", "0", "0", "");
+            ValueItem v = new ValueItem("(無)", "0.000", "0.000", "0.000", "0.000", "0.000", "0.000", "0.000", "0.000", "0.000", "");
             valueArray.add(v);
         }
         boxAdapter.notifyDataSetChanged();
@@ -317,6 +321,7 @@ public class MainActivity extends Activity {
                 if (seekBar.getProgress() > SEEK_DEST) {
                     if (List_file != null)
                         List_file.clear();
+                    brandSelector.setSelection(0);
                     myAdapter.notifyDataSetChanged();
                     swapTitle.setText("目前無換牌指令");
                     swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
@@ -324,14 +329,13 @@ public class MainActivity extends Activity {
                     swapMsg.setVisibility(View.INVISIBLE);
                     seekBar.setProgress(5);
                     seekBar.setEnabled(false);
+                    mySeekBar.setVisibility(View.GONE);
+                    mySeekBar.setEnabled(false);
                     swapEnd = true;
                     swapWorking = false;
                     bname = "";
                     brandName.setText(bname);
-                    mySeekBar.setVisibility(View.GONE);
-                    mySeekBar.setEnabled(false);
                     btn_enter.setEnabled(false);
-                    //returnWorkerID = "";
                     workerID.setText("");
                     if (task != null) {
                         Log.d("Mylog", "task is: " + task.getStatus());
@@ -372,7 +376,19 @@ public class MainActivity extends Activity {
     private View.OnClickListener enterListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            Log.d("Mylog", "enter pressed, ID=" + returnWorkerID);
+            Log.d("Mylog", "enter pressed, ID=" + returnWorkerID + ", returnBrandName=" + returnBrandName);
+            if(nextBrandArray.size()>1 && returnBrandName!=1) {
+                dialog = new AlertDialog.Builder(MainActivity.this).create();
+                dialog.setTitle("警告");
+                dialog.setMessage("未確認下個品牌");
+                dialog.setButton("重試一次",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialoginterface, int i) {
+                            }
+                        });
+                dialog.show();
+                return;
+            }
             mySeekBar.setVisibility(View.VISIBLE);
             mySeekBar.setEnabled(true);
             swapTitle.setText("向右滑動切換品牌");
@@ -493,6 +509,25 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("SWAP_MSG\t", "");
                     swapMsg.setVisibility(View.VISIBLE);
                     swapMsg.setText(s);
+                    if(s.contains("此工號不存在")) {
+                        if(task!=null)
+                            task.cancel(true);
+                        swapWorking = true;
+                        Log.d("mylog", "此工號不存在");
+                        AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+                        dialog.setTitle("警告");
+                        dialog.setMessage("此工號不存在！");
+                        dialog.setPositiveButton("重試一次",
+                                new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialoginterface, int i) {
+                                        mySeekBar.setVisibility(View.GONE);
+                                        btn_enter.setEnabled(true);
+                                        swapMsg.setText("請輸入品牌與員工ID");
+                                        Log.d("Mylog", "此工號不存在::ok is pressed, task is: " + task.getStatus());
+                                    }
+                                });
+                        dialog.show();
+                    }
                 } else if(s!=null && s.contains("BC_MSG")) {  //廣播
                     bc_msgWorking = true;
                     Log.d("mylog", "inside BC_MSG");
@@ -529,20 +564,20 @@ public class MainActivity extends Activity {
                     }
                 } else if(s != null && s.contains("LIST\t")) {
                     //if(List_file != null) {
-                        //List_file.clear();
+                    //List_file.clear();
                     //    List_file = new ArrayList<ListItem>();
                     //} else
-                    if(List_file == null)
+                    if (List_file == null)
                         List_file = new ArrayList<ListItem>();
                     s = s.replaceAll("LIST\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     String[] items = s.split("\n");
-                    for(String i: items){
-                        Log.d("Mylog","line i=" + i);
+                    for (String i : items) {
+                        Log.d("Mylog", "line i=" + i);
                         String[] single_item = i.split("\t");
                         String barcode_text = "";
-                        if(single_item.length >= 5) {
+                        if (single_item.length >= 5) {
                             updateList = true;
                             barcode_text = single_item[2];
                             bname = single_item[1];
@@ -558,11 +593,21 @@ public class MainActivity extends Activity {
                             List_file.add(singleItem);
                         }
                     }
-
                 } else if(s!=null && s.contains("SWAP")) {
                     //s = s.replaceAll("SWAP\t", "");
+                    tempSwapMessage = s;
                     swapWorking = true;
                     Log.d("Mylog", "swap!!");
+                    String[] items = s.split("\t");
+                    nextBrandArray.clear();
+                    if(items.length >= 1) {  //have next brand
+                        nextBrandArray.add("(請選擇)");
+                        nextBrandArray.add(items[1]);
+                        nextBrandAdapter.notifyDataSetChanged();
+                    } else {
+                        nextBrandArray.add("(無)");
+                        nextBrandAdapter.notifyDataSetChanged();
+                    }
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
                     dialog.setTitle("警告");
                     dialog.setMessage("已下達換牌指令！");
@@ -646,7 +691,7 @@ public class MainActivity extends Activity {
                 active = false;
                 if (task != null)
                     task.cancel(true);
-                SocketHandler.closeSocket();
+                //SocketHandler.closeSocket();
                 if (pd != null)
                     pd.dismiss();
                 Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
