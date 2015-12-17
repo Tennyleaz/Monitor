@@ -32,7 +32,7 @@ import com.google.zxing.WriterException;
 import java.util.ArrayList;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP ="140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
