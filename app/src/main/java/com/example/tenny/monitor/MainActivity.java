@@ -15,6 +15,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Bundle;
 import android.support.v4.content.res.ResourcesCompat;
+import android.text.SpannableString;
+import android.text.style.RelativeSizeSpan;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -30,9 +32,10 @@ import android.widget.TextView;
 import com.google.zxing.WriterException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP ="140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
@@ -44,7 +47,7 @@ public class MainActivity extends Activity {
     private AsyncTask task = null;
     private String str1, bname, returnWorkerID, tempSwapMessage;
     private SeekBar mySeekBar;
-    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false, swapOK=false;
+    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false, swap_msgWorking=false, swap_msg_reply=false;
     private ListView firstlist, valueListView, boxListView;
     private MySimpleArrayAdapter myAdapter;
     private ValueAdapter valueAdapter;
@@ -62,6 +65,7 @@ public class MainActivity extends Activity {
     static boolean active = false;
     private static int rebootCount;
     private int returnBrandName;
+    private HashMap<String, String>recipe_map;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,7 +76,7 @@ public class MainActivity extends Activity {
         Log.d("mylog", "BOARD_ID=" + BOARD_ID);
         TextView board_id = (TextView) findViewById(R.id.board_id);
         if(BOARD_ID.contains("CM"))
-            board_id.setText("捲包機" + settings.getString("board_ID", "1"));
+            board_id.setText("捲菸機" + settings.getString("board_ID", "1"));
         else if(BOARD_ID.contains("PM"))
             board_id.setText("包裝機" + settings.getString("board_ID", "1"));
         else
@@ -183,7 +187,7 @@ public class MainActivity extends Activity {
             dialog = new AlertDialog.Builder(MainActivity.this).create();
             dialog.setTitle("警告");
             dialog.setMessage("無網路連線,\n程式即將關閉");
-            dialog.setButton("OK",
+            dialog.setButton(DialogInterface.BUTTON_POSITIVE, "OK",
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialoginterface, int i) {
                             android.os.Process.killProcess(android.os.Process.myPid());
@@ -240,7 +244,10 @@ public class MainActivity extends Activity {
         String init = "CONNECT\t" + BOARD_ID + "<END>";
         SocketHandler.writeToSocket(init);
         str1 = SocketHandler.getOutput();
-        //Log.d("Mylog", str1);
+
+        String q = "QUERY\tRECIPE_LIST<END>";
+        SocketHandler.writeToSocket(q);
+        recipe_map = new HashMap<>();
     }
 
     private boolean isNetworkConnected() {
@@ -264,10 +271,11 @@ public class MainActivity extends Activity {
             Log.e("Mylog", "ServerDownHandler: connect failed!");
             if(dialog!=null && dialog.isShowing()) return;
             if(active) {
+                active = false;
                 dialog = new AlertDialog.Builder(MainActivity.this).create();
                 dialog.setTitle("警告");
                 dialog.setMessage("伺服器無回應，\n5秒後自動重新連線，若問題持續請洽系統管理員");
-                dialog.setButton("關閉程式",
+                dialog.setButton(DialogInterface.BUTTON_POSITIVE, "關閉程式",
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialoginterface, int i) {
                                 android.os.Process.killProcess(android.os.Process.myPid());
@@ -281,18 +289,28 @@ public class MainActivity extends Activity {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    Log.d("mylog", "wait 5000ms");
+                    Log.d("mylog", "ServerDownHandler wait 5000ms");
                     try { Thread.sleep(5000); }
                     catch (InterruptedException e) {
-                        e.printStackTrace();
                         Log.e("mylog", "InterruptedException e=" + e);
                     }
+                    if(connected) return;
                     if(dialog!=null && dialog.isShowing())
                         dialog.cancel();
                     active = false;
+                    if(task!=null) task.cancel(true);
+                    Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+                    for (Thread t : threads) {
+                        if(t!=null) {
+                            Log.e("mylog", "force interrupt a thread");
+                            t.interrupt();
+                        }
+                    }
+                    Log.d("mylog", "ServerDownHandler to start intent.");
                     Intent intent = new Intent(MainActivity.this, MainActivity.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
+                    Log.d("mylog", "ServerDownHandler end.");
                 }
             }).start();
             return;
@@ -319,8 +337,8 @@ public class MainActivity extends Activity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
                 if (seekBar.getProgress() > SEEK_DEST) {
-                    if (List_file != null)
-                        List_file.clear();
+                    /*if (List_file != null)
+                        List_file.clear();*/
                     brandSelector.setSelection(0);
                     myAdapter.notifyDataSetChanged();
                     swapTitle.setText("目前無換牌指令");
@@ -380,8 +398,8 @@ public class MainActivity extends Activity {
             if(nextBrandArray.size()>1 && returnBrandName!=1) {
                 dialog = new AlertDialog.Builder(MainActivity.this).create();
                 dialog.setTitle("警告");
-                dialog.setMessage("未確認下個品牌");
-                dialog.setButton("重試一次",
+                dialog.setMessage(setDialogText("未確認下個品牌", 3));
+                dialog.setButton(DialogInterface.BUTTON_POSITIVE, "重試一次",
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialoginterface, int i) {
                             }
@@ -412,9 +430,9 @@ public class MainActivity extends Activity {
         protected String doInBackground(Void... v) {
             //Log.d("Mylog", "UpdateTask listening0...");
             while(!isCancelled()) {
-                Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
+                //Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
                 if(swapEnd) {
-                    Log.d("Mylog", "prepare to send SWAP OK, ID=" +  returnWorkerID);
+                    Log.d("Mylog", "prepare to send SWAP OK, ID=" + returnWorkerID);
                     String s = "SWAP_OK\t" + returnWorkerID +"<END>";
                     SocketHandler.writeToSocket(s);
                     swapWorking = false;
@@ -437,7 +455,15 @@ public class MainActivity extends Activity {
                     bc_msgWorking = false;
                     Log.d("Mylog", "BC_MSG_OK");
                 }
-                if(bc_msgWorking)
+                if(swap_msg_reply) {
+                    Log.d("Mylog", "to send SWAP_MSG_OK<END>");
+                    String s = "SWAP_MSG_OK<END>";
+                    SocketHandler.writeToSocket(s);
+                    swap_msg_reply = false;
+                    swap_msgWorking = false;
+                    Log.d("Mylog", "SWAP_MSG_OK");
+                }
+                if(bc_msgWorking || swap_msgWorking)
                     continue;
 
                 Log.e("Mylog", "UpdateTask listening...");
@@ -460,13 +486,15 @@ public class MainActivity extends Activity {
         }
         protected void onProgressUpdate(String... values) {
             if(connectionTimeoutCount >= 10) {
+                connected = false;
                 Log.e("Mylog", "connect failed!");
                 if(dialog!=null && dialog.isShowing()) return;
                 if(active) {
+                    active = false;
                     dialog = new AlertDialog.Builder(MainActivity.this).create();
                     dialog.setTitle("警告");
                     dialog.setMessage("伺服器無回應，\n5秒後自動重新連線，若問題持續請洽系統管理員");
-                    dialog.setButton("關閉程式",
+                    dialog.setButton(DialogInterface.BUTTON_POSITIVE, "關閉程式",
                             new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialoginterface, int i) {
                                     android.os.Process.killProcess(android.os.Process.myPid());
@@ -483,14 +511,24 @@ public class MainActivity extends Activity {
                         Log.d("mylog", "wait 5000ms");
                         try { Thread.sleep(5000); }
                         catch (InterruptedException e) {
-                            e.printStackTrace();
-                            Log.e("mylog", "InterruptedException e=" + e);
+                            //e.printStackTrace();
+                            Log.e("mylog", "InterruptedException e=" + e.toString());
                         }
+                        if(connected) return;
                         if(dialog!=null && dialog.isShowing())
                             dialog.cancel();
+                        if(task!=null) task.cancel(true);
                         Intent intent = new Intent(MainActivity.this, MainActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
+                        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+                        for (Thread t : threads) {
+                            if(t!=null) {
+                                Log.e("mylog", "force interrupt a thread");
+                                t.interrupt();
+                            }
+                        }
+                        Log.d("mylog", "onProgressUpdate end.");
                     }
                 }).start();
                 return;
@@ -505,10 +543,10 @@ public class MainActivity extends Activity {
             boolean updateList = false;
             for(String s: lines) {
                 Log.d("Mylog", "s in line=" + s);
-                if(s!=null && s.contains("SWAP_MSG\t")) {
+                if(active && s!=null && s.contains("SWAP_MSG\t")) {
                     s = s.replaceAll("SWAP_MSG\t", "");
-                    swapMsg.setVisibility(View.VISIBLE);
-                    swapMsg.setText(s);
+                    //swapMsg.setVisibility(View.VISIBLE);
+                    //swapMsg.setText(s);
                     if(s.contains("此工號不存在")) {
                         if(task!=null)
                             task.cancel(true);
@@ -516,8 +554,9 @@ public class MainActivity extends Activity {
                         Log.d("mylog", "此工號不存在");
                         AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
                         dialog.setTitle("警告");
-                        dialog.setMessage("此工號不存在！");
-                        dialog.setPositiveButton("重試一次",
+                        dialog.setMessage("此工號不存在");
+                        dialog.setMessage(setDialogText(s, 3));
+                        dialog.setPositiveButton("重試",
                                 new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialoginterface, int i) {
                                         mySeekBar.setVisibility(View.GONE);
@@ -527,15 +566,30 @@ public class MainActivity extends Activity {
                                     }
                                 });
                         dialog.show();
+                    } else {
+                        swap_msgWorking = true;
+                        Log.d("mylog", "inside SWAP_MSG");
+                        s = s.replaceAll("SWAP_MSG\t", "");
+                        AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+                        dialog.setTitle("廣播");
+                        dialog.setMessage(setDialogText(s, 3));
+                        dialog.setPositiveButton("OK",
+                                new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialoginterface, int i) {
+                                        //send BC_MSG_OK<END>
+                                        swap_msg_reply = true;
+                                    }
+                                });
+                        dialog.setCancelable(false);
+                        dialog.show();
                     }
-                } else if(s!=null && s.contains("BC_MSG")) {  //廣播
+                } else if(active && s!=null && s.contains("BC_MSG")) {  //廣播
                     bc_msgWorking = true;
                     Log.d("mylog", "inside BC_MSG");
                     s = s.replaceAll("BC_MSG\t", "");
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
-                    dialog = new AlertDialog.Builder(MainActivity.this);
                     dialog.setTitle("廣播");
-                    dialog.setMessage(s);
+                    dialog.setMessage(setDialogText(s, 3));
                     dialog.setPositiveButton("OK",
                             new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialoginterface, int i) {
@@ -545,12 +599,12 @@ public class MainActivity extends Activity {
                             });
                     dialog.setCancelable(false);
                     dialog.show();
-                } else if(s!=null && s.contains("MSG\t")) {
+                } else if(active && s!=null && s.contains("MSG\t")) {
                     s = s.replaceAll("MSG\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     msg.setText(s);
-                } else if(s!=null && s.contains("UPDATE_LIST\t")) {
+                } else if(active && s!=null && s.contains("UPDATE_LIST\t")) {
                     s = s.replaceAll("UPDATE_LIST\t", "");
                     String[] items = s.split("\t");
                     if(items.length >= 2 && List_file != null) {
@@ -562,13 +616,15 @@ public class MainActivity extends Activity {
                             }
                         }
                     }
-                } else if(s != null && s.contains("LIST\t")) {
+                } else if(active && s != null && s.contains("LIST\t")) {
                     //if(List_file != null) {
                     //List_file.clear();
                     //    List_file = new ArrayList<ListItem>();
                     //} else
                     if (List_file == null)
                         List_file = new ArrayList<ListItem>();
+                    else
+                        List_file.clear();
                     s = s.replaceAll("LIST\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -593,7 +649,7 @@ public class MainActivity extends Activity {
                             List_file.add(singleItem);
                         }
                     }
-                } else if(s!=null && s.contains("SWAP")) {
+                } else if(active && s!=null && s.contains("SWAP")) {
                     //s = s.replaceAll("SWAP\t", "");
                     tempSwapMessage = s;
                     swapWorking = true;
@@ -602,7 +658,7 @@ public class MainActivity extends Activity {
                     nextBrandArray.clear();
                     if(items.length >= 1) {  //have next brand
                         nextBrandArray.add("(請選擇)");
-                        nextBrandArray.add(items[1]);
+                        nextBrandArray.add(recipe_map.get(items[1]));
                         nextBrandAdapter.notifyDataSetChanged();
                     } else {
                         nextBrandArray.add("(無)");
@@ -610,7 +666,7 @@ public class MainActivity extends Activity {
                     }
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
                     dialog.setTitle("警告");
-                    dialog.setMessage("已下達換牌指令！");
+                    dialog.setMessage(setDialogText("已下達換牌指令！", 3));
                     dialog.setPositiveButton("OK",
                             new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialoginterface, int i) {
@@ -627,12 +683,12 @@ public class MainActivity extends Activity {
                     swapMsg.setText("請輸入品牌與員工ID");
                     Log.d("Mylog", "prepare to show dialog...");
                     dialog.show();
-                } else if(s!=null && s.contains("LIST_EMPTY<END>")) {
+                } else if(active && s!=null && s.contains("LIST_EMPTY<END>")) {
                     Log.d("Mylog", "clear!");
                     if(List_file != null)
                         List_file.clear();
                     myAdapter.notifyDataSetChanged();
-                } else if(s!=null && s.contains("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
+                } else if(active && s!=null && s.contains("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
                     s = s.replaceAll("UPDATE_BOX\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -647,7 +703,7 @@ public class MainActivity extends Activity {
                         }
                     }
                     boxAdapter.notifyDataSetChanged();
-                } else if(s!=null && s.contains("UPDATE_VALUE\t")) {  //時間\t線號\t品牌名稱\t重量max\t重量value\t重量min\t圓周max\t圓周value\t圓周min\t透氣率max\t透氣率value\t透氣率min
+                } else if(active && s!=null && s.contains("UPDATE_VALUE\t")) {  //時間\t線號\t品牌名稱\t重量max\t重量value\t重量min\t圓周max\t圓周value\t圓周min\t透氣率max\t透氣率value\t透氣率min
                     s = s.replaceAll("UPDATE_VALUE\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -664,6 +720,21 @@ public class MainActivity extends Activity {
                         }
                     }
                     valueAdapter.notifyDataSetChanged();
+                } else if (active && s!=null && s.contains("QUERY_REPLY\t")) {
+                    s = s.replaceAll("QUERY_REPLY\t", "");
+                    s = s.replaceAll("<N>", "\n");
+                    s = s.replaceAll("<END>", "");
+                    Log.d("mylog", "new RECIPE_LIST=" + s);
+                    String[] items = s.split("\n");
+                    for(String i: items) {
+                        String[] recipe = i.split("\t");
+                        if(recipe.length>1)
+                            recipe_map.put(recipe[0], recipe[1]);
+                    }
+                }
+                if (s!=null && s.contains("CONNECT_OK<END>")) {
+                    active = true;
+                    connected = true;
                 }
             }
             if(updateList) {
@@ -671,6 +742,12 @@ public class MainActivity extends Activity {
                 firstlist.setAdapter(myAdapter);
             }
         }
+    }
+
+    public SpannableString setDialogText(String text, float size) {
+        SpannableString ss = new SpannableString(text);
+        ss.setSpan(new RelativeSizeSpan(size), 0, ss.length(), 0);
+        return ss;
     }
 
     @Override
