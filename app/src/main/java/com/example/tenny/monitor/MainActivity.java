@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
     private AsyncTask task = null;
-    private String str1, bname, returnWorkerID, tempSwapMessage;
+    private String str1, bname, returnWorkerID, tempSwapMessage, key;
     private SeekBar mySeekBar;
     private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false, swap_msgWorking=false, swap_msg_reply=false;
     private ListView firstlist, valueListView, boxListView;
@@ -65,7 +65,7 @@ public class MainActivity extends Activity {
     static boolean active = false;
     private static int rebootCount;
     private int returnBrandName;
-    private HashMap<String, String>recipe_map;
+    private HashMap<String, String> recipe_map;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -247,7 +247,7 @@ public class MainActivity extends Activity {
 
         String q = "QUERY\tRECIPE_LIST<END>";
         SocketHandler.writeToSocket(q);
-        recipe_map = new HashMap<>();
+        recipe_map = new HashMap<String, String>();
     }
 
     private boolean isNetworkConnected() {
@@ -658,12 +658,19 @@ public class MainActivity extends Activity {
                     nextBrandArray.clear();
                     if(items.length >= 1) {  //have next brand
                         nextBrandArray.add("(請選擇)");
-                        nextBrandArray.add(recipe_map.get(items[1]));
-                        nextBrandAdapter.notifyDataSetChanged();
+                        key = items[1];
+                        String value = recipe_map.get(key);
+                        Log.d( "mylog", "items[1] is " + key + ", next brand is " +value );
+                        if(value != null) {
+                            nextBrandArray.add(value);
+                            key = null;
+                        } else {
+                            Log.d("mylog", "value is null");
+                        }
                     } else {
                         nextBrandArray.add("(無)");
-                        nextBrandAdapter.notifyDataSetChanged();
                     }
+                    nextBrandAdapter.notifyDataSetChanged();
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
                     dialog.setTitle("警告");
                     dialog.setMessage(setDialogText("已下達換牌指令！", 3));
@@ -728,9 +735,20 @@ public class MainActivity extends Activity {
                     String[] items = s.split("\n");
                     for(String i: items) {
                         String[] recipe = i.split("\t");
-                        if(recipe.length>1)
+                        if(recipe.length>1) {
                             recipe_map.put(recipe[0], recipe[1]);
+                            //Log.d("mylog", recipe[0] + " " + recipe[1] + "\n");
+                        }
                     }
+                    if(key != null) {
+                        nextBrandArray.add(recipe_map.get(key));
+                        nextBrandAdapter.notifyDataSetChanged();
+                        key = null;
+                    }
+                    /*System.out.println("recipe_map=");
+                    for (Object key : recipe_map.keySet()) {
+                        System.out.println(key + " : " + recipe_map.get(key));
+                    }*/
                 }
                 if (s!=null && s.contains("CONNECT_OK<END>")) {
                     active = true;
