@@ -35,11 +35,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static String BOARD_ID = "CM_1_M";
+    static String BOARD_ID = "CM_6_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
     private ScrollForeverTextView msg;
@@ -81,6 +81,14 @@ public class MainActivity extends Activity {
             board_id.setText("包裝機" + settings.getString("board_ID", "1"));
         else
             board_id.setText("裝箱機" + settings.getString("board_ID", "1"));
+
+        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+        for (Thread t : threads) {
+            if(t!=null) {
+                Log.e("mylog", "onCreate init:force interrupt a thread");
+                t.interrupt();
+            }
+        }
 
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
@@ -508,7 +516,7 @@ public class MainActivity extends Activity {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        Log.d("mylog", "wait 5000ms");
+                        Log.d("mylog", "onProgressUpdate:wait 5000ms");
                         try { Thread.sleep(5000); }
                         catch (InterruptedException e) {
                             //e.printStackTrace();
@@ -518,6 +526,7 @@ public class MainActivity extends Activity {
                         if(dialog!=null && dialog.isShowing())
                             dialog.cancel();
                         if(task!=null) task.cancel(true);
+                        Log.d("mylog", "onProgressUpdate:after 5000ms");
                         Intent intent = new Intent(MainActivity.this, MainActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
@@ -542,6 +551,7 @@ public class MainActivity extends Activity {
             Log.d("Mylog", "lines.length=" + length);
             boolean updateList = false;
             for(String s: lines) {
+                notOnstop = true;
                 Log.d("Mylog", "s in line=" + s);
                 if(active && s!=null && s.contains("SWAP_MSG\t")) {
                     s = s.replaceAll("SWAP_MSG\t", "");
