@@ -35,11 +35,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static String BOARD_ID = "CM_6_M";
+    static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
     private ScrollForeverTextView msg;
@@ -666,7 +666,8 @@ public class MainActivity extends Activity {
                     Log.d("Mylog", "swap!!");
                     String[] items = s.split("\t");
                     nextBrandArray.clear();
-                    if(items.length >= 1) {  //have next brand
+                    Log.d("mylog", "items.length="+ items.length);
+                    if(items.length > 1) {  //have next brand
                         nextBrandArray.add("(請選擇)");
                         key = items[1];
                         String value = recipe_map.get(key);
