@@ -666,7 +666,7 @@ public class MainActivity extends Activity {
                     Log.d("Mylog", "swap!!");
                     String[] items = s.split("\t");
                     nextBrandArray.clear();
-                    Log.d("mylog", "items.length="+ items.length);
+                    Log.d("mylog", "items.length=" + items.length);
                     if(items.length > 1) {  //have next brand
                         nextBrandArray.add("(請選擇)");
                         key = items[1];
@@ -824,14 +824,15 @@ public class MainActivity extends Activity {
 
     @Override
     public void onStop() {
-        if(!notOnstop) {
+        /*if(!notOnstop) {
             Log.d("mylog", "onStop is called");
             System.exit(0);
             task.cancel(true);
             SocketHandler.closeSocket();
             finish();
-        }
+        }*/
         active = false;
+        task.cancel(true);
         super.onStop();
     }
 }
