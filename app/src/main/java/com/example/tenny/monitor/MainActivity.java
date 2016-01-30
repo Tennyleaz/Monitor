@@ -66,11 +66,13 @@ public class MainActivity extends Activity {
     private static int rebootCount;
     private int returnBrandName;
     private HashMap<String, String> recipe_map;
+    private static Context staticContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        staticContext = getApplicationContext();
         final SharedPreferences settings = getApplicationContext().getSharedPreferences("EC510", 0);
         BOARD_ID = settings.getString("board_name", "CM") + "_" + settings.getString("board_ID", "1") + "_M";
         Log.d("mylog", "BOARD_ID=" + BOARD_ID);
@@ -831,8 +833,27 @@ public class MainActivity extends Activity {
             SocketHandler.closeSocket();
             finish();
         }*/
+        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+        Thread.enumerate(threads);
+        for (Thread t : threads) {
+            t.interrupt();
+        }
         active = false;
         task.cancel(true);
         super.onStop();
+    }
+
+    public static void restart(){
+        if(staticContext == null) return;
+        Log.d("mylog", "restart is called");
+        active = false;
+        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+        Thread.enumerate(threads);
+        for (Thread t : threads) {
+            t.interrupt();
+        }
+        Intent intent = new Intent(staticContext, ChangeID.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        staticContext.startActivity(intent);
     }
 }

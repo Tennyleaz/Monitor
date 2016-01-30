@@ -43,10 +43,12 @@ public class SocketHandler {
         catch (UnknownHostException e)
         {
             System.out.println("Error0: "+e.getMessage());
+            MainActivity.restart();
         }
         catch(IOException e)
         {
             System.out.println("Error1: " + e.getMessage());
+            MainActivity.restart();
         }
         return socket;
     }
@@ -77,6 +79,7 @@ public class SocketHandler {
                 }
             } catch (IOException e) {
                 System.out.println("Error getOutput: " + e.getMessage());
+                MainActivity.restart();
             }
             result = byteListToString(buffer);
             return result;
@@ -93,6 +96,7 @@ public class SocketHandler {
                 out.write(s.getBytes());
             } catch (IOException e) {
                 System.out.println("Error writeToSocket: " + e.getMessage());
+                MainActivity.restart();
             }
         }
         else
