@@ -193,57 +193,60 @@ public class MainActivity extends Activity {
         tab = (TextView)tabView.findViewById(android.R.id.title);
         tab.setTextSize(24);
 
-        if(!isNetworkConnected()) {  //close when not connected
-            dialog = new AlertDialog.Builder(MainActivity.this).create();
-            dialog.setTitle("警告");
-            dialog.setMessage("無網路連線,\n程式即將關閉");
-            dialog.setButton(DialogInterface.BUTTON_POSITIVE, "OK",
-                    new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialoginterface, int i) {
-                            android.os.Process.killProcess(android.os.Process.myPid());
-                            System.exit(1);
-                        }
-                    });
-            dialog.show();
-            Log.e("Mylog", "no network");
-        }
-        else {  /* 開啟一個新線程，在新線程裡執行耗時的方法 */
-            rebootCount = 0;
-            pd = new ProgressDialog(MainActivity.this);
-            pd.setTitle("連線中");
-            pd.setMessage("Please wait...");
-            pd.setCancelable(false);
+        try {
+            if (!isNetworkConnected()) {  //close when not connected
+                dialog = new AlertDialog.Builder(MainActivity.this).create();
+                dialog.setTitle("警告");
+                dialog.setMessage("無網路連線,\n程式即將關閉");
+                dialog.setButton(DialogInterface.BUTTON_POSITIVE, "OK",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialoginterface, int i) {
+                                android.os.Process.killProcess(android.os.Process.myPid());
+                                System.exit(1);
+                            }
+                        });
+                dialog.show();
+                Log.e("Mylog", "no network");
+            } else {  /* 開啟一個新線程，在新線程裡執行耗時的方法 */
+                rebootCount = 0;
+                pd = new ProgressDialog(MainActivity.this);
+                pd.setTitle("連線中");
+                pd.setMessage("Please wait...");
+                pd.setCancelable(false);
             /*pd.setButton(DialogInterface.BUTTON_NEUTRAL, "更改ID...", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     //dialog.dismiss();
                 }
             });*/
-            pd.show();
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    InitServer();
-                    handler.sendEmptyMessage(0);// 執行耗時的方法之後發送消給handler
-                }
-
-            }).start();
-            new Thread(new Runnable() {
-                @Override
-                public void run() {  // 需要背景作的事
-                    try {
-                        for (int i = 0; i < 10; i++) {
-                            Thread.sleep(1000);
-                        }
-                        if(!connected) {
-                            Log.e("Mylog", "1000ms timeout");
-                            ServerDownHandler.sendEmptyMessage(0);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                pd.show();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        InitServer();
+                        handler.sendEmptyMessage(0);// 執行耗時的方法之後發送消給handler
                     }
-                }
-            }).start();
+
+                }).start();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {  // 需要背景作的事
+                        try {
+                            for (int i = 0; i < 10; i++) {
+                                Thread.sleep(1000);
+                            }
+                            if (!connected) {
+                                Log.e("Mylog", "1000ms timeout");
+                                ServerDownHandler.sendEmptyMessage(0);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
+            }
+        } catch (Exception e) {
+            Log.e("mylog", "exception in onCreate");
         }
         task = new UpdateTask().execute();
     }
