@@ -22,11 +22,11 @@ public class OnBootReceiver extends BroadcastReceiver {
         ConnectivityManager connectivityManager = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE );
         final android.net.NetworkInfo wifi = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
         //boolean isConnected = wifi != null && wifi.isConnectedOrConnecting();
-        Log.d("mylog", "OnBootReceiver");
-        if (wifi.isAvailable()) {
-            Log.d("mylog", "OnBootReceiver is connected");
+        Log.e("mylog", "OnBootReceiver");
+        if (wifi.isAvailable() && !MainActivity.active) {
+            Log.e("mylog", "OnBootReceiver is connected");
             Intent myActivity = new Intent(context, MainActivity.class);
-            myActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            myActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(myActivity);
         }
     }

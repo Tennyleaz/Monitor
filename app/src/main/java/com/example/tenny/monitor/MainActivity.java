@@ -195,7 +195,7 @@ public class MainActivity extends Activity {
 
         try {
             if (!isNetworkConnected()) {  //close when not connected
-                dialog = new AlertDialog.Builder(MainActivity.this).create();
+                /*dialog = new AlertDialog.Builder(MainActivity.this).create();
                 dialog.setTitle("警告");
                 dialog.setMessage("無網路連線,\n程式即將關閉");
                 dialog.setButton(DialogInterface.BUTTON_POSITIVE, "OK",
@@ -205,8 +205,29 @@ public class MainActivity extends Activity {
                                 System.exit(1);
                             }
                         });
-                dialog.show();
+                dialog.show();*/
                 Log.e("Mylog", "no network");
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {  // 需要背景作的事
+                        try {
+                            //for (int i = 0; i < 10; i++) {
+                                Thread.sleep(3000);
+                            //}
+
+                                Log.e("Mylog", "3000ms timeout");
+                                ServerDownHandler.sendEmptyMessage(0);
+                            Log.d("Mylog", "After call serverdownhandler");
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Log.e("Mylog", "3000ms timeout is interrupted!");
+                            ServerDownHandler.sendEmptyMessage(0);
+                            Log.d("Mylog", "After call serverdownhandler");
+                        }
+                    }
+                }).start();
+                Log.d("mylog", "no network end");
             } else {  /* 開啟一個新線程，在新線程裡執行耗時的方法 */
                 rebootCount = 0;
                 pd = new ProgressDialog(MainActivity.this);
@@ -241,6 +262,7 @@ public class MainActivity extends Activity {
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
+                            ServerDownHandler.sendEmptyMessage(0);
                         }
                     }
                 }).start();
@@ -260,7 +282,8 @@ public class MainActivity extends Activity {
 
         String q = "QUERY\tRECIPE_LIST<END>";
         SocketHandler.writeToSocket(q);
-        recipe_map = new HashMap<String, String>();
+        if(recipe_map == null)
+            recipe_map = new HashMap<String, String>();
     }
 
     private boolean isNetworkConnected() {
@@ -280,8 +303,8 @@ public class MainActivity extends Activity {
     private Handler ServerDownHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {// handler接收到消息後就會執行此方法
-            pd.dismiss();// 關閉ProgressDialog
             Log.e("Mylog", "ServerDownHandler: connect failed!");
+            if(pd!=null) pd.dismiss();// 關閉ProgressDialog
             if(dialog!=null && dialog.isShowing()) return;
             if(active) {
                 active = false;
@@ -443,6 +466,7 @@ public class MainActivity extends Activity {
         protected String doInBackground(Void... v) {
             //Log.d("Mylog", "UpdateTask listening0...");
             while(!isCancelled()) {
+                if(!isNetworkConnected()) break;
                 //Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
                 if(swapEnd) {
                     Log.d("Mylog", "prepare to send SWAP OK, ID=" + returnWorkerID);
@@ -484,13 +508,13 @@ public class MainActivity extends Activity {
                 result = SocketHandler.getOutput();
                 publishProgress(result);
                 Log.d("Mylog", "result=" + result);
-                if (result == null || result.isEmpty() || result.equals(""))
-                    connectionTimeoutCount++;
-                else
-                    connectionTimeoutCount = 0;
+                //if (result == null || result.isEmpty() || result.equals(""))
+                //    //connectionTimeoutCount++;
+                //else
+                //    connectionTimeoutCount = 0;
                 //
                 try {
-                    Thread.sleep(400);
+                    Thread.sleep(1000);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -627,7 +651,8 @@ public class MainActivity extends Activity {
                             if(List_file.get(j).productSerial.equals(items[0])) {
                                 List_file.get(j).itemCount = items[1];
                                 //Log.d("mylog", "becomes: " + List_file.get(j).itemCount);
-                                myAdapter.notifyDataSetChanged();
+                                if(myAdapter!=null)
+                                    myAdapter.notifyDataSetChanged();
                             }
                         }
                     }
@@ -749,6 +774,8 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("<END>", "");
                     Log.d("mylog", "new RECIPE_LIST=" + s);
                     String[] items = s.split("\n");
+                    if(recipe_map == null)
+                        recipe_map = new HashMap<String, String>();
                     for(String i: items) {
                         String[] recipe = i.split("\t");
                         if(recipe.length>1) {
@@ -814,7 +841,7 @@ public class MainActivity extends Activity {
                 Intent intent = new Intent(MainActivity.this, ChangeID.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
-                finish();
+                //finish();
             }
             return true;
         }
@@ -848,7 +875,7 @@ public class MainActivity extends Activity {
 
     public static void restart(){
         if(staticContext == null) return;
-        Log.d("mylog", "restart is called");
+        Log.e("mylog", "restart is called");
         active = false;
         Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
         Thread.enumerate(threads);

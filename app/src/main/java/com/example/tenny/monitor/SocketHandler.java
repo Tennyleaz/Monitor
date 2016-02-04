@@ -63,7 +63,7 @@ public class SocketHandler {
             int i;
             List<Byte> buffer = new ArrayList<Byte>();;
             //byte[] buffer = new byte[32768];
-            byte[] readbyte = new byte[4096];
+            byte[] readbyte = new byte[8192];
             try {
                 while((i=in.read(readbyte)) != -1) {
                     for(int j=0; j<i; j++) {
@@ -72,7 +72,7 @@ public class SocketHandler {
                     //to test if <END> received
                     String s= new String(readbyte, 0, i);
                     readbyte = null;
-                    readbyte = new byte[4096];
+                    readbyte = new byte[8192];
                     Log.d("Mylog", "i=" + i + ", s="+s);
                     if(s.contains("<END>"))
                         break;
