@@ -95,6 +95,8 @@ public class MainActivity extends Activity {
         //        t.interrupt();
         //    }
         //}
+        try { LogToServer.getRequest("\n========== App started. BOARD_ID=" + BOARD_ID + "==========");
+        } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
 
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
@@ -844,40 +846,40 @@ public class MainActivity extends Activity {
         }
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
             rebootCount += "U";
+            Log.d("mylog", "rebootCount="+rebootCount);
+            if(rebootCount.equals("UUDDUU")) {
+                //notOnstop = true;
+                try { LogToServer.getRequest("to change board ID...");
+                } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
+                active = false;
+                if (task != null)
+                    task.cancel(true);
+                //SocketHandler.closeSocket();
+                if (pd != null)
+                    pd.dismiss();
+                Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+                Thread.enumerate(threads);
+                for (Thread t : threads) {
+                    t.interrupt();
+                }
+                Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
+                Intent intent = new Intent(MainActivity.this, ChangeID.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                intent.putExtra("correctChangeID", 1);
+                startActivity(intent);
+                finish();
+            }
             if(rebootCount.length()>6)
                 rebootCount = "";
             return true;
         }
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             rebootCount += "D";
+            Log.d("mylog", "rebootCount="+rebootCount);
             if(rebootCount.length()>6)
                 rebootCount = "";
             return true;
         }
-
-        if(rebootCount.equals("UUDDUU")) {
-            //notOnstop = true;
-            try { LogToServer.getRequest("to change board ID...");
-            } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
-            active = false;
-            if (task != null)
-                task.cancel(true);
-            //SocketHandler.closeSocket();
-            if (pd != null)
-                pd.dismiss();
-            Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
-            Thread.enumerate(threads);
-            for (Thread t : threads) {
-                t.interrupt();
-            }
-            Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
-            Intent intent = new Intent(MainActivity.this, ChangeID.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            intent.putExtra("correctChangeID", 1);
-            startActivity(intent);
-            finish();
-        }
-
         return super.onKeyDown(keyCode, event);
     }
 
