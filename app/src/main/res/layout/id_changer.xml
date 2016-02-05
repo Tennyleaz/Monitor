@@ -67,4 +67,13 @@
         android:id="@+id/textView13"
         android:layout_alignTop="@+id/nameSelect"
         android:layout_alignStart="@+id/textView12" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="取消"
+        android:id="@+id/button2"
+        android:layout_alignTop="@+id/button"
+        android:layout_toEndOf="@+id/button"
+        android:layout_marginLeft="20dp" />
 </RelativeLayout>

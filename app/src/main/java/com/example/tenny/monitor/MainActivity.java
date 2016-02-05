@@ -39,13 +39,14 @@ public class MainActivity extends Activity {
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static String BOARD_ID = "CM_1_M";
+    static final String VERSION = "2.5";
+    public static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
     private ScrollForeverTextView msg;
     private static ProgressDialog pd;
-    private AsyncTask task = null;
-    private String str1, bname, returnWorkerID, tempSwapMessage, key;
+    private static AsyncTask task = null;
+    private String str1, bname, returnWorkerID, key;
     private SeekBar mySeekBar;
     private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false, swap_msgWorking=false, swap_msg_reply=false;
     private ListView firstlist, valueListView, boxListView;
@@ -57,40 +58,43 @@ public class MainActivity extends Activity {
     private ArrayList<String> nextBrandArray;
     private ArrayAdapter<String> nextBrandAdapter;
     private ArrayList<ListItem> List_file;
-    private int connectionTimeoutCount;
+    //private int connectionTimeoutCount;
     private Spinner brandSelector;
     private Button n1, n2, n3, n4, n5, n6, n7,n8, n9, n0, btn_enter, btn_delete;
     private TabHost tabHost;
     AlertDialog dialog;
     static boolean active = false;
-    private static int rebootCount;
+    private static String rebootCount;
     private int returnBrandName;
     private HashMap<String, String> recipe_map;
+
     private static Context staticContext;
+    private static Activity staticActivity;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         staticContext = getApplicationContext();
+        staticActivity = this;
         final SharedPreferences settings = getApplicationContext().getSharedPreferences("EC510", 0);
         BOARD_ID = settings.getString("board_name", "CM") + "_" + settings.getString("board_ID", "1") + "_M";
         Log.d("mylog", "BOARD_ID=" + BOARD_ID);
         TextView board_id = (TextView) findViewById(R.id.board_id);
         if(BOARD_ID.contains("CM"))
-            board_id.setText("捲菸機" + settings.getString("board_ID", "1"));
+            board_id.setText("捲菸機" + settings.getString("board_ID", "1") + " v" + VERSION);
         else if(BOARD_ID.contains("PM"))
-            board_id.setText("包裝機" + settings.getString("board_ID", "1"));
+            board_id.setText("包裝機" + settings.getString("board_ID", "1") + " v"  + VERSION);
         else
-            board_id.setText("裝箱機" + settings.getString("board_ID", "1"));
+            board_id.setText("裝箱機" + settings.getString("board_ID", "1") + " v"  + VERSION);
 
-        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
-        for (Thread t : threads) {
-            if(t!=null) {
-                Log.e("mylog", "onCreate init:force interrupt a thread");
-                t.interrupt();
-            }
-        }
+        //Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+        //for (Thread t : threads) {
+        //    if(t!=null) {
+        //        LogToServer.e("mylog", "onCreate init:force interrupt a thread");
+        //        t.interrupt();
+        //    }
+        //}
 
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
@@ -109,8 +113,8 @@ public class MainActivity extends Activity {
         bc_msgWorking = false;
         brandName = (TextView) findViewById(R.id.brandName);
         firstlist = (ListView) findViewById(R.id.listView2);
-        connectionTimeoutCount = 0;
-        tempSwapMessage = null;
+        //connectionTimeoutCount = 0;
+        //tempSwapMessage = null;
         //TextClock tc= (TextClock) findViewById(R.id.textClock);
         //tc.setFormat24Hour();
         returnWorkerID = "";
@@ -211,12 +215,9 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {  // 需要背景作的事
                         try {
-                            //for (int i = 0; i < 10; i++) {
-                                Thread.sleep(3000);
-                            //}
-
-                                Log.e("Mylog", "3000ms timeout");
-                                ServerDownHandler.sendEmptyMessage(0);
+                            Thread.sleep(3000);
+                            Log.e("Mylog", "3000ms timeout");
+                            ServerDownHandler.sendEmptyMessage(0);
                             Log.d("Mylog", "After call serverdownhandler");
 
                         } catch (Exception e) {
@@ -229,7 +230,7 @@ public class MainActivity extends Activity {
                 }).start();
                 Log.d("mylog", "no network end");
             } else {  /* 開啟一個新線程，在新線程裡執行耗時的方法 */
-                rebootCount = 0;
+                rebootCount = "";
                 pd = new ProgressDialog(MainActivity.this);
                 pd.setTitle("連線中");
                 pd.setMessage("Please wait...");
@@ -247,7 +248,6 @@ public class MainActivity extends Activity {
                         InitServer();
                         handler.sendEmptyMessage(0);// 執行耗時的方法之後發送消給handler
                     }
-
                 }).start();
                 new Thread(new Runnable() {
                     @Override
@@ -262,7 +262,8 @@ public class MainActivity extends Activity {
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
-                            ServerDownHandler.sendEmptyMessage(0);
+                            if(!connected)
+                                ServerDownHandler.sendEmptyMessage(0);
                         }
                     }
                 }).start();
@@ -306,6 +307,7 @@ public class MainActivity extends Activity {
             Log.e("Mylog", "ServerDownHandler: connect failed!");
             if(pd!=null) pd.dismiss();// 關閉ProgressDialog
             if(dialog!=null && dialog.isShowing()) return;
+            if(connected) return;
             if(active) {
                 active = false;
                 dialog = new AlertDialog.Builder(MainActivity.this).create();
@@ -321,7 +323,7 @@ public class MainActivity extends Activity {
                         });
                 dialog.show();
             }
-            notOnstop = true;
+            //notOnstop = true;
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -346,6 +348,7 @@ public class MainActivity extends Activity {
                     Intent intent = new Intent(MainActivity.this, MainActivity.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
+                    finish();
                     Log.d("mylog", "ServerDownHandler end.");
                 }
             }).start();
@@ -397,6 +400,9 @@ public class MainActivity extends Activity {
                     }
                     task = new UpdateTask().execute();
                     Log.d("Mylog", "swap end.");
+                    try {
+                        LogToServer.getRequest("swap task end");
+                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     //swapWorking = false;
                 } else {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
@@ -464,12 +470,14 @@ public class MainActivity extends Activity {
     private class UpdateTask extends AsyncTask<Void, String, String> {
         @Override
         protected String doInBackground(Void... v) {
-            //Log.d("Mylog", "UpdateTask listening0...");
+            //LogToServer.d("Mylog", "UpdateTask listening0...");
             while(!isCancelled()) {
                 if(!isNetworkConnected()) break;
-                //Log.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
+                //LogToServer.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
                 if(swapEnd) {
                     Log.d("Mylog", "prepare to send SWAP OK, ID=" + returnWorkerID);
+                    try { LogToServer.getRequest( "prepare to send SWAP OK, ID=" + returnWorkerID);
+                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     String s = "SWAP_OK\t" + returnWorkerID +"<END>";
                     SocketHandler.writeToSocket(s);
                     swapWorking = false;
@@ -482,10 +490,12 @@ public class MainActivity extends Activity {
                     Log.e("Mylog", "break!");
                     break;
                 }
-                if(connectionTimeoutCount >= 11)
-                    break;
+                //if(connectionTimeoutCount >= 11)
+                //    break;
                 if(bc_msg_reply) {
                     Log.d("Mylog", "to send BC_MSG_OK<END>");
+                    try { LogToServer.getRequest( "prepare to send BC_MSG_OK<END>");
+                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     String s = "BC_MSG_OK<END>";
                     SocketHandler.writeToSocket(s);
                     bc_msg_reply = false;
@@ -514,7 +524,7 @@ public class MainActivity extends Activity {
                 //    connectionTimeoutCount = 0;
                 //
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(800);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -522,9 +532,9 @@ public class MainActivity extends Activity {
             return null;
         }
         protected void onProgressUpdate(String... values) {
-            if(connectionTimeoutCount >= 10) {
+            /*if(connectionTimeoutCount >= 10) {
                 connected = false;
-                Log.e("Mylog", "connect failed!");
+                LogToServer.e("Mylog", "connect failed!");
                 if(dialog!=null && dialog.isShowing()) return;
                 if(active) {
                     active = false;
@@ -536,7 +546,7 @@ public class MainActivity extends Activity {
                                 public void onClick(DialogInterface dialoginterface, int i) {
                                     android.os.Process.killProcess(android.os.Process.myPid());
                                     System.exit(1);
-                                    Log.d("mylog", "to finish task...");
+                                    LogToServer.d("mylog", "to finish task...");
                                 }
                             });
                     dialog.show();
@@ -545,32 +555,31 @@ public class MainActivity extends Activity {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        Log.d("mylog", "onProgressUpdate:wait 5000ms");
+                        LogToServer.d("mylog", "onProgressUpdate:wait 5000ms");
                         try { Thread.sleep(5000); }
                         catch (InterruptedException e) {
-                            //e.printStackTrace();
-                            Log.e("mylog", "InterruptedException e=" + e.toString());
+                            LogToServer.e("mylog", "InterruptedException e=" + e.toString());
                         }
                         if(connected) return;
                         if(dialog!=null && dialog.isShowing())
                             dialog.cancel();
                         if(task!=null) task.cancel(true);
-                        Log.d("mylog", "onProgressUpdate:after 5000ms");
+                        LogToServer.d("mylog", "onProgressUpdate:after 5000ms");
                         Intent intent = new Intent(MainActivity.this, MainActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
-                        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+                        Thread[] threads = new Thread[Thread.activeCount()];
                         for (Thread t : threads) {
                             if(t!=null) {
-                                Log.e("mylog", "force interrupt a thread");
+                                LogToServer.e("mylog", "force interrupt a thread");
                                 t.interrupt();
                             }
                         }
-                        Log.d("mylog", "onProgressUpdate end.");
+                        LogToServer.d("mylog", "onProgressUpdate end.");
                     }
                 }).start();
                 return;
-            }
+            }*/
 
             String result = values[0];
             if(result==null ||result.length() == 0) return;
@@ -580,7 +589,7 @@ public class MainActivity extends Activity {
             Log.d("Mylog", "lines.length=" + length);
             boolean updateList = false;
             for(String s: lines) {
-                notOnstop = true;
+                //notOnstop = true;
                 Log.d("Mylog", "s in line=" + s);
                 if(active && s!=null && s.contains("SWAP_MSG\t")) {
                     s = s.replaceAll("SWAP_MSG\t", "");
@@ -650,7 +659,7 @@ public class MainActivity extends Activity {
                         for(int j=0; j<List_file.size(); j++) {
                             if(List_file.get(j).productSerial.equals(items[0])) {
                                 List_file.get(j).itemCount = items[1];
-                                //Log.d("mylog", "becomes: " + List_file.get(j).itemCount);
+                                //LogToServer.d("mylog", "becomes: " + List_file.get(j).itemCount);
                                 if(myAdapter!=null)
                                     myAdapter.notifyDataSetChanged();
                             }
@@ -678,7 +687,7 @@ public class MainActivity extends Activity {
                             barcode_text = single_item[2];
                             bname = single_item[1];
                             brandName.setText(bname);
-                            //Log.d("Mylog", "barcode_text=" + barcode_text);
+                            //LogToServer.d("Mylog", "barcode_text=" + barcode_text);
                             Bitmap bitmap = null;
                             try {
                                 bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 450, 100);
@@ -691,9 +700,11 @@ public class MainActivity extends Activity {
                     }
                 } else if(active && s!=null && s.contains("SWAP")) {
                     //s = s.replaceAll("SWAP\t", "");
-                    tempSwapMessage = s;
+                    //tempSwapMessage = s;
                     swapWorking = true;
                     Log.d("Mylog", "swap!!");
+                    try { LogToServer.getRequest( "swap!");
+                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     String[] items = s.split("\t");
                     nextBrandArray.clear();
                     Log.d("mylog", "items.length=" + items.length);
@@ -725,16 +736,21 @@ public class MainActivity extends Activity {
                                     swapWorking = true;
                                     btn_enter.setEnabled(true);
                                     Log.d("Mylog", "OK pressed");
+                                    try { LogToServer.getRequest( "OK pressed");
+                                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                                     //task.cancel(true);
                                 }
                             });
                     swapMsg.setText("請輸入品牌與員工ID");
                     Log.d("Mylog", "prepare to show dialog...");
                     dialog.show();
-                } else if(active && s!=null && s.contains("LIST_EMPTY<END>")) {
+                } else if(active && s!=null && s.contains("LIST_EMPTY")) {
                     Log.d("Mylog", "clear!");
+                    try { LogToServer.getRequest( "clear!");
+                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     if(List_file != null)
                         List_file.clear();
+                    brandName.setText("(無)");
                     myAdapter.notifyDataSetChanged();
                 } else if(active && s!=null && s.contains("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
                     s = s.replaceAll("UPDATE_BOX\t", "");
@@ -773,6 +789,8 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     Log.d("mylog", "new RECIPE_LIST=" + s);
+                    try { LogToServer.getRequest( "new RECIPE_LIST=" + s);
+                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     String[] items = s.split("\n");
                     if(recipe_map == null)
                         recipe_map = new HashMap<String, String>();
@@ -780,7 +798,7 @@ public class MainActivity extends Activity {
                         String[] recipe = i.split("\t");
                         if(recipe.length>1) {
                             recipe_map.put(recipe[0], recipe[1]);
-                            //Log.d("mylog", recipe[0] + " " + recipe[1] + "\n");
+                            //LogToServer.d("mylog", recipe[0] + " " + recipe[1] + "\n");
                         }
                     }
                     if(key != null) {
@@ -793,7 +811,7 @@ public class MainActivity extends Activity {
                         System.out.println(key + " : " + recipe_map.get(key));
                     }*/
                 }
-                if (s!=null && s.contains("CONNECT_OK<END>")) {
+                if (s!=null && s.contains("CONNECT_OK")) {
                     active = true;
                     connected = true;
                 }
@@ -814,6 +832,8 @@ public class MainActivity extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if(keyCode == KeyEvent.KEYCODE_BACK) {
+            try { LogToServer.getRequest("back is pressed");
+            } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
             Log.d("Mylog", "back is pressed");
             finish();
             System.exit(0);
@@ -823,28 +843,41 @@ public class MainActivity extends Activity {
             finish();
         }
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            rebootCount++;
-            if(rebootCount > 3) {
-                notOnstop = true;
-                active = false;
-                if (task != null)
-                    task.cancel(true);
-                //SocketHandler.closeSocket();
-                if (pd != null)
-                    pd.dismiss();
-                Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
-                Thread.enumerate(threads);
-                for (Thread t : threads) {
-                    t.interrupt();
-                }
-                Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
-                Intent intent = new Intent(MainActivity.this, ChangeID.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                //finish();
-            }
+            rebootCount += "U";
+            if(rebootCount.length()>6)
+                rebootCount = "";
             return true;
         }
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            rebootCount += "D";
+            if(rebootCount.length()>6)
+                rebootCount = "";
+            return true;
+        }
+
+        if(rebootCount.equals("UUDDUU")) {
+            //notOnstop = true;
+            try { LogToServer.getRequest("to change board ID...");
+            } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
+            active = false;
+            if (task != null)
+                task.cancel(true);
+            //SocketHandler.closeSocket();
+            if (pd != null)
+                pd.dismiss();
+            Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+            Thread.enumerate(threads);
+            for (Thread t : threads) {
+                t.interrupt();
+            }
+            Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
+            Intent intent = new Intent(MainActivity.this, ChangeID.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            intent.putExtra("correctChangeID", 1);
+            startActivity(intent);
+            finish();
+        }
+
         return super.onKeyDown(keyCode, event);
     }
 
@@ -857,33 +890,39 @@ public class MainActivity extends Activity {
     @Override
     public void onStop() {
         /*if(!notOnstop) {
-            Log.d("mylog", "onStop is called");
+            LogToServer.d("mylog", "onStop is called");
             System.exit(0);
             task.cancel(true);
             SocketHandler.closeSocket();
             finish();
         }*/
-        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
-        Thread.enumerate(threads);
+        Log.d("mylog", "onStop is called");
+        //Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+        /*Thread.enumerate(threads);
         for (Thread t : threads) {
+            LogToServer.d("mylog", "onStop interrupt a thread");
             t.interrupt();
-        }
+        }*/
         active = false;
         task.cancel(true);
         super.onStop();
     }
 
-    public static void restart(){
+    public static void restart() {
         if(staticContext == null) return;
         Log.e("mylog", "restart is called");
+        try { LogToServer.getRequest("restart is called");
+        } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
         active = false;
         Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
         Thread.enumerate(threads);
         for (Thread t : threads) {
+            Log.d("mylog", "restart interrupt a thread");
             t.interrupt();
         }
-        Intent intent = new Intent(staticContext, ChangeID.class);
+        Intent intent = new Intent(staticContext, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         staticContext.startActivity(intent);
+        staticActivity.finish();
     }
 }

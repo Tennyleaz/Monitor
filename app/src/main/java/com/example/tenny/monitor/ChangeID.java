@@ -20,6 +20,10 @@ public class ChangeID extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Intent intent = getIntent();
+        int correctChangeID = intent.getExtras().getInt("correctChangeID", 0);
+        if( correctChangeID != 1) return;
+
         setContentView(R.layout.id_changer);
         ArrayList<String> nameArray, idArray;
         final Spinner nameSelect = (Spinner) findViewById(R.id.nameSelect);
@@ -27,6 +31,7 @@ public class ChangeID extends Activity {
         TextView name = (TextView) findViewById(R.id.name);
         TextView number = (TextView) findViewById(R.id.number);
         Button btn = (Button) findViewById(R.id.button);
+        Button btnCancel = (Button) findViewById(R.id.button2);
         final SharedPreferences settings = getApplicationContext().getSharedPreferences("EC510", 0);
         Log.e("mylog", "change id start");
 
@@ -65,6 +70,14 @@ public class ChangeID extends Activity {
                 Intent intent = new Intent(ChangeID.this, MainActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
+                finish();
+            }
+        });
+
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
             }
         });
     }

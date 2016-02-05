@@ -2,6 +2,10 @@ package com.example.tenny.monitor;
 /**
  * Created by Tenny on 2015/8/29.
  */
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
 import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,20 +46,24 @@ public class SocketHandler {
         }
         catch (UnknownHostException e)
         {
-            System.out.println("Error0: "+e.getMessage());
+            System.out.println("Error0: UnknownHostException, "+e.getMessage());
+            try { LogToServer.getRequest("initSocket:UnknownHostException");
+            } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
             MainActivity.restart();
         }
         catch(IOException e)
         {
-            System.out.println("Error1: " + e.getMessage());
+            System.out.println("Error1: IOException, " + e.getMessage());
+            try { LogToServer.getRequest("initSocket:IOException");
+            } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
             MainActivity.restart();
         }
         return socket;
     }
 
-    public static synchronized void setSocket(Socket socket){
-        SocketHandler.socket = socket;
-    }
+    //public static synchronized void setSocket(Socket socket){
+    //    SocketHandler.socket = socket;
+    //}
 
     public static synchronized String getOutput(){
         if(isCreated) {
@@ -78,7 +86,9 @@ public class SocketHandler {
                         break;
                 }
             } catch (IOException e) {
-                System.out.println("Error getOutput: " + e.getMessage());
+                System.out.println("Error getOutput IOException: " + e.getMessage());
+                try { LogToServer.getRequest("getOutput:IOException");
+                } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
                 MainActivity.restart();
             }
             result = byteListToString(buffer);
@@ -86,6 +96,8 @@ public class SocketHandler {
         }
         else {
             Log.e("Mylog", "socket not created, cant get output!");
+            try { LogToServer.getRequest("socket not created, cant get output!");
+            } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
             return null;
         }
     }
@@ -95,12 +107,17 @@ public class SocketHandler {
             try {
                 out.write(s.getBytes());
             } catch (IOException e) {
-                System.out.println("Error writeToSocket: " + e.getMessage());
+                System.out.println("Error writeToSocket IOException: " + e.getMessage());
+                try { LogToServer.getRequest(" writeToSocket:IOException");
+                } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
                 MainActivity.restart();
             }
         }
-        else
+        else {
             Log.e("Mylog", "socket not created, cant write!");
+            try { LogToServer.getRequest(" socket not created, cant write!");
+            } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
+        }
     }
 
     private static String byteListToString(List<Byte> l) {
