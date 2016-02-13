@@ -25,8 +25,6 @@ public class OnBootReceiver extends BroadcastReceiver {
         Log.e("mylog", "OnBootReceiver");
         if (wifi.isAvailable() && !MainActivity.active) {
             Log.e("mylog", "OnBootReceiver:MainActivity not active, will start");
-            try { LogToServer.getRequest("OnBootReceiver:MainActivity not active, will start");
-            } catch (Exception e) { Log.e("mylog", "OnBootReceiver:LogToServer error"); }
             Intent myActivity = new Intent(context, MainActivity.class);
             myActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(myActivity);

@@ -35,7 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
@@ -95,8 +95,8 @@ public class MainActivity extends Activity {
         //        t.interrupt();
         //    }
         //}
-        try { LogToServer.getRequest("\n========== App started. BOARD_ID=" + BOARD_ID + "==========");
-        } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
+        LogToServer.getRequest("\n========== App started. BOARD_ID=" + BOARD_ID + "==========");
+        //LogToServer.getRequest("test");
 
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
@@ -213,6 +213,7 @@ public class MainActivity extends Activity {
                         });
                 dialog.show();*/
                 Log.e("Mylog", "no network");
+                LogToServer.getRequest("no network");
                 new Thread(new Runnable() {
                     @Override
                     public void run() {  // 需要背景作的事
@@ -237,13 +238,14 @@ public class MainActivity extends Activity {
                 pd.setTitle("連線中");
                 pd.setMessage("Please wait...");
                 pd.setCancelable(false);
+                LogToServer.getRequest("連線中...");
             /*pd.setButton(DialogInterface.BUTTON_NEUTRAL, "更改ID...", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     //dialog.dismiss();
                 }
             });*/
-                pd.show();
+                        pd.show();
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -260,6 +262,7 @@ public class MainActivity extends Activity {
                             }
                             if (!connected) {
                                 Log.e("Mylog", "1000ms timeout");
+                                LogToServer.getRequest("連線 1000ms timeout!");
                                 ServerDownHandler.sendEmptyMessage(0);
                             }
                         } catch (Exception e) {
@@ -326,6 +329,7 @@ public class MainActivity extends Activity {
                 dialog.show();
             }
             //notOnstop = true;
+            LogToServer.getRequest("prepare to restart...");
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -361,6 +365,7 @@ public class MainActivity extends Activity {
     private void updateUI() {
         if(str1 != null && str1.contains("CONNECT_OK")) {
             connectState.setText("伺服器辨識成功");
+            LogToServer.getRequest("伺服器辨識成功");
             connectState.setTextColor(getResources().getColor(R.color.green));
             connected = true;
         } else {
@@ -402,9 +407,6 @@ public class MainActivity extends Activity {
                     }
                     task = new UpdateTask().execute();
                     Log.d("Mylog", "swap end.");
-                    try {
-                        LogToServer.getRequest("swap task end");
-                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     //swapWorking = false;
                 } else {
                     seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
@@ -439,6 +441,7 @@ public class MainActivity extends Activity {
         @Override
         public void onClick(View v) {
             Log.d("Mylog", "enter pressed, ID=" + returnWorkerID + ", returnBrandName=" + returnBrandName);
+            LogToServer.getRequest("enter pressed, ID=" + returnWorkerID);
             if(nextBrandArray.size()>1 && returnBrandName!=1) {
                 dialog = new AlertDialog.Builder(MainActivity.this).create();
                 dialog.setTitle("警告");
@@ -478,12 +481,10 @@ public class MainActivity extends Activity {
                 //LogToServer.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
                 if(swapEnd) {
                     Log.d("Mylog", "prepare to send SWAP OK, ID=" + returnWorkerID);
-                    try { LogToServer.getRequest( "prepare to send SWAP OK, ID=" + returnWorkerID);
-                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     String s = "SWAP_OK\t" + returnWorkerID +"<END>";
                     SocketHandler.writeToSocket(s);
                     swapWorking = false;
-                    swapEnd = false;  //TODO: check if ID is correct
+                    swapEnd = false;
                     returnWorkerID = "";
                     Log.d("Mylog", "swapWorking -> false");
                     continue;
@@ -496,8 +497,6 @@ public class MainActivity extends Activity {
                 //    break;
                 if(bc_msg_reply) {
                     Log.d("Mylog", "to send BC_MSG_OK<END>");
-                    try { LogToServer.getRequest( "prepare to send BC_MSG_OK<END>");
-                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     String s = "BC_MSG_OK<END>";
                     SocketHandler.writeToSocket(s);
                     bc_msg_reply = false;
@@ -602,6 +601,7 @@ public class MainActivity extends Activity {
                             task.cancel(true);
                         swapWorking = true;
                         Log.d("mylog", "此工號不存在");
+                        LogToServer.getRequest("此工號不存在:" + returnWorkerID);
                         AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
                         dialog.setTitle("警告");
                         dialog.setMessage("此工號不存在");
@@ -626,7 +626,6 @@ public class MainActivity extends Activity {
                         dialog.setPositiveButton("OK",
                                 new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialoginterface, int i) {
-                                        //send BC_MSG_OK<END>
                                         swap_msg_reply = true;
                                     }
                                 });
@@ -661,17 +660,12 @@ public class MainActivity extends Activity {
                         for(int j=0; j<List_file.size(); j++) {
                             if(List_file.get(j).productSerial.equals(items[0])) {
                                 List_file.get(j).itemCount = items[1];
-                                //LogToServer.d("mylog", "becomes: " + List_file.get(j).itemCount);
                                 if(myAdapter!=null)
                                     myAdapter.notifyDataSetChanged();
                             }
                         }
                     }
                 } else if(active && s != null && s.contains("LIST\t")) {
-                    //if(List_file != null) {
-                    //List_file.clear();
-                    //    List_file = new ArrayList<ListItem>();
-                    //} else
                     if (List_file == null)
                         List_file = new ArrayList<ListItem>();
                     else
@@ -689,7 +683,6 @@ public class MainActivity extends Activity {
                             barcode_text = single_item[2];
                             bname = single_item[1];
                             brandName.setText(bname);
-                            //LogToServer.d("Mylog", "barcode_text=" + barcode_text);
                             Bitmap bitmap = null;
                             try {
                                 bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 450, 100);
@@ -701,12 +694,8 @@ public class MainActivity extends Activity {
                         }
                     }
                 } else if(active && s!=null && s.contains("SWAP")) {
-                    //s = s.replaceAll("SWAP\t", "");
-                    //tempSwapMessage = s;
                     swapWorking = true;
                     Log.d("Mylog", "swap!!");
-                    try { LogToServer.getRequest( "swap!");
-                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     String[] items = s.split("\t");
                     nextBrandArray.clear();
                     Log.d("mylog", "items.length=" + items.length);
@@ -719,7 +708,8 @@ public class MainActivity extends Activity {
                             nextBrandArray.add(value);
                             key = null;
                         } else {
-                            Log.d("mylog", "value is null");
+                            Log.d("mylog", "cannot find recipe " + key);
+                            LogToServer.getRequest("cannot find recipe " + key);
                         }
                     } else {
                         nextBrandArray.add("(無)");
@@ -738,8 +728,6 @@ public class MainActivity extends Activity {
                                     swapWorking = true;
                                     btn_enter.setEnabled(true);
                                     Log.d("Mylog", "OK pressed");
-                                    try { LogToServer.getRequest( "OK pressed");
-                                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                                     //task.cancel(true);
                                 }
                             });
@@ -748,8 +736,7 @@ public class MainActivity extends Activity {
                     dialog.show();
                 } else if(active && s!=null && s.contains("LIST_EMPTY")) {
                     Log.d("Mylog", "clear!");
-                    try { LogToServer.getRequest( "clear!");
-                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
+                    LogToServer.getRequest("list is cleared.");
                     if(List_file != null)
                         List_file.clear();
                     brandName.setText("(無)");
@@ -791,8 +778,6 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     Log.d("mylog", "new RECIPE_LIST=" + s);
-                    try { LogToServer.getRequest( "new RECIPE_LIST=" + s);
-                    } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                     String[] items = s.split("\n");
                     if(recipe_map == null)
                         recipe_map = new HashMap<String, String>();
@@ -834,8 +819,6 @@ public class MainActivity extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if(keyCode == KeyEvent.KEYCODE_BACK) {
-            try { LogToServer.getRequest("back is pressed");
-            } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
             Log.d("Mylog", "back is pressed");
             finish();
             System.exit(0);
@@ -849,8 +832,6 @@ public class MainActivity extends Activity {
             Log.d("mylog", "rebootCount="+rebootCount);
             if(rebootCount.equals("UUDDUU")) {
                 //notOnstop = true;
-                try { LogToServer.getRequest("to change board ID...");
-                } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
                 active = false;
                 if (task != null)
                     task.cancel(true);
@@ -863,6 +844,7 @@ public class MainActivity extends Activity {
                     t.interrupt();
                 }
                 Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
+                LogToServer.getRequest("to change ID");
                 Intent intent = new Intent(MainActivity.this, ChangeID.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 intent.putExtra("correctChangeID", 1);
@@ -913,8 +895,7 @@ public class MainActivity extends Activity {
     public static void restart() {
         if(staticContext == null) return;
         Log.e("mylog", "restart is called");
-        try { LogToServer.getRequest("restart is called");
-        } catch (Exception e) { Log.e("mylog", "LogToServer error"); }
+        LogToServer.getRequest("Socket ERROR, restart is called!");
         active = false;
         Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
         Thread.enumerate(threads);
