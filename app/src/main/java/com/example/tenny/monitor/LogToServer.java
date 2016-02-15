@@ -12,7 +12,7 @@ import java.net.URLEncoder;
  */
 public class LogToServer {
 
-    private static final String site = "http://140.113.167.14/wlog.php?";
+    private static final String site = "http://192.168.1.250/wlog.php?";
     private static URL url = null;
     private static String mySite = null;
 

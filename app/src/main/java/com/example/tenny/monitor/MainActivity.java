@@ -35,11 +35,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static final String VERSION = "2.5";
+    static final String VERSION = "2.6";
     public static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
@@ -525,8 +525,15 @@ public class MainActivity extends Activity {
                 //    connectionTimeoutCount = 0;
                 //
                 try {
+                    Thread.currentThread();
                     Thread.sleep(800);
                 } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
+                    wait();
+                } catch (InterruptedException e) {
+                    Log.e("mylog", "wait is interrupted");
                     e.printStackTrace();
                 }
             }
@@ -585,13 +592,14 @@ public class MainActivity extends Activity {
             String result = values[0];
             if(result==null ||result.length() == 0) return;
             String[] lines = result.split("<END>");
-            int length = lines.length;
-
-            Log.d("Mylog", "lines.length=" + length);
+            LogToServer.getRequest("收到:" + result);
+            //int length = lines.length;
+            //Log.d("Mylog", "lines.length=" + length);
             boolean updateList = false;
             for(String s: lines) {
                 //notOnstop = true;
                 Log.d("Mylog", "s in line=" + s);
+                LogToServer.getRequest("分行:" + s);
                 if(active && s!=null && s.contains("SWAP_MSG\t")) {
                     s = s.replaceAll("SWAP_MSG\t", "");
                     //swapMsg.setVisibility(View.VISIBLE);
@@ -807,6 +815,7 @@ public class MainActivity extends Activity {
                 myAdapter = new MySimpleArrayAdapter(MainActivity.this, List_file);
                 firstlist.setAdapter(myAdapter);
             }
+            notify();
         }
     }
 
