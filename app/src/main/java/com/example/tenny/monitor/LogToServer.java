@@ -12,12 +12,16 @@ import java.net.URLEncoder;
  */
 public class LogToServer {
 
-    private static final String site = "http://192.168.1.250/wlog.php?";
+    private static final String site = "http://192.168.1.250/wlog.php?";//"http://140.113.167.14/wlog.php?";
     private static URL url = null;
-    private static String mySite = null;
 
     public static synchronized void getRequest(String words) {
         final String ID = MainActivity.BOARD_ID;
+        String mySite = null;
+        if(words == null)
+            return;
+        if(words.contains("分行:UPDATE_BOX") || words.contains("分行:UPDATE_VALUE"))
+            return;
 
         try {
             mySite = site + "ID="+ ID + "&Log=" + URLEncoder.encode(words + "\n", "UTF-8");

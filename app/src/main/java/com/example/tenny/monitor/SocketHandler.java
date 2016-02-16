@@ -26,6 +26,7 @@ public class SocketHandler {
     private static OutputStream out = null;
     private static String ip;
     private static int port;
+    private static int disconnectCount = 0;
 
     public static synchronized Socket getSocket(){
         if(isCreated)
@@ -43,6 +44,7 @@ public class SocketHandler {
             isCreated = true;
             in = socket.getInputStream();
             out = socket.getOutputStream();
+            disconnectCount = 0;
         }
         catch (UnknownHostException e)
         {
@@ -92,6 +94,16 @@ public class SocketHandler {
                 MainActivity.restart();
             }
             result = byteListToString(buffer);
+            if (result == null || result.length() == 0) {
+                disconnectCount++;
+            } else {
+                disconnectCount = 0;
+            }
+            if (disconnectCount >= 10) {
+                LogToServer.getRequest("無回應>=10次, need to reboot!");
+                Log.e("Mylog", "socket disconnectCount >= 10 !");
+                MainActivity.restart();
+            }
             return result;
         }
         else {

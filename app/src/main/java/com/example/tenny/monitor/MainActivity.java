@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static final String VERSION = "2.6";
+    static final String VERSION = "2.10";
     public static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
@@ -473,6 +473,7 @@ public class MainActivity extends Activity {
     };
 
     private class UpdateTask extends AsyncTask<Void, String, String> {
+        private Object lock = new Object();
         @Override
         protected String doInBackground(Void... v) {
             //LogToServer.d("Mylog", "UpdateTask listening0...");
@@ -524,14 +525,16 @@ public class MainActivity extends Activity {
                 //else
                 //    connectionTimeoutCount = 0;
                 //
-                try {
+                /*try {
                     Thread.currentThread();
-                    Thread.sleep(800);
+                    Thread.sleep(500);
                 } catch (Exception e) {
                     e.printStackTrace();
-                }
+                }*/
                 try {
-                    wait();
+                    synchronized(lock) {
+                        lock.wait(3000);
+                    }
                 } catch (InterruptedException e) {
                     Log.e("mylog", "wait is interrupted");
                     e.printStackTrace();
@@ -539,6 +542,7 @@ public class MainActivity extends Activity {
             }
             return null;
         }
+        @Override
         protected void onProgressUpdate(String... values) {
             /*if(connectionTimeoutCount >= 10) {
                 connected = false;
@@ -661,6 +665,7 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     msg.setText(s);
+                    LogToServer.getRequest("MSG已經更新");
                 } else if(active && s!=null && s.contains("UPDATE_LIST\t")) {
                     s = s.replaceAll("UPDATE_LIST\t", "");
                     String[] items = s.split("\t");
@@ -749,6 +754,8 @@ public class MainActivity extends Activity {
                         List_file.clear();
                     brandName.setText("(無)");
                     myAdapter.notifyDataSetChanged();
+                    nextBrandAdapter.clear();
+                    //nextBrandAdapter = new ArrayAdapter<String>(MainActivity.this,  android.R.layout.simple_spinner_dropdown_item, nextBrandArray);
                 } else if(active && s!=null && s.contains("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
                     s = s.replaceAll("UPDATE_BOX\t", "");
                     s = s.replaceAll("<N>", "\n");
@@ -815,8 +822,19 @@ public class MainActivity extends Activity {
                 myAdapter = new MySimpleArrayAdapter(MainActivity.this, List_file);
                 firstlist.setAdapter(myAdapter);
             }
-            notify();
+            synchronized(lock) {
+                lock.notifyAll();
+            }
         }
+
+        /*@Override
+        protected void onCancelled () {
+            super.onCancelled();
+            synchronized(lock) {
+                lock.notify();
+            }
+            Log.d("mylog", "task is cancled");
+        }*/
     }
 
     public SpannableString setDialogText(String text, float size) {
@@ -841,6 +859,7 @@ public class MainActivity extends Activity {
             Log.d("mylog", "rebootCount="+rebootCount);
             if(rebootCount.equals("UUDDUU")) {
                 //notOnstop = true;
+                rebootCount = "";
                 active = false;
                 if (task != null)
                     task.cancel(true);
@@ -890,21 +909,29 @@ public class MainActivity extends Activity {
             finish();
         }*/
         Log.d("mylog", "onStop is called");
+        LogToServer.getRequest("onStop is called");
         //Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
         /*Thread.enumerate(threads);
         for (Thread t : threads) {
             LogToServer.d("mylog", "onStop interrupt a thread");
             t.interrupt();
         }*/
+        rebootCount = "";
         active = false;
         task.cancel(true);
         super.onStop();
     }
 
     public static void restart() {
-        if(staticContext == null) return;
-        Log.e("mylog", "restart is called");
         LogToServer.getRequest("Socket ERROR, restart is called!");
+        Log.e("mylog", "restart is called");
+        try{
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if(staticContext == null) return;
+        rebootCount = "";
         active = false;
         Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
         Thread.enumerate(threads);
