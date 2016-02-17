@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static final String VERSION = "2.10";
+    static final String VERSION = "2.11";
     public static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         //        t.interrupt();
         //    }
         //}
-        LogToServer.getRequest("\n========== App started. BOARD_ID=" + BOARD_ID + "==========");
+        LogToServer.getRequest("========== App started. BOARD_ID=" + BOARD_ID + " ==========");
         //LogToServer.getRequest("test");
 
         connectState = (TextView) findViewById(R.id.connectState);
@@ -595,8 +595,10 @@ public class MainActivity extends Activity {
 
             String result = values[0];
             if(result==null ||result.length() == 0) return;
-            String[] lines = result.split("<END>");
             LogToServer.getRequest("收到:" + result);
+            //Log.d("Mylog", "收到:" + result);
+            String[] lines = result.split("<END>");
+
             //int length = lines.length;
             //Log.d("Mylog", "lines.length=" + length);
             boolean updateList = false;
@@ -683,6 +685,8 @@ public class MainActivity extends Activity {
                         List_file = new ArrayList<ListItem>();
                     else
                         List_file.clear();
+                    nextBrandArray.clear();
+                    nextBrandAdapter.notifyDataSetChanged();
                     s = s.replaceAll("LIST\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -747,14 +751,15 @@ public class MainActivity extends Activity {
                     swapMsg.setText("請輸入品牌與員工ID");
                     Log.d("Mylog", "prepare to show dialog...");
                     dialog.show();
-                } else if(active && s!=null && s.contains("LIST_EMPTY")) {
+                } else if (active && s!=null && s.contains("LIST_EMPTY")) {
                     Log.d("Mylog", "clear!");
                     LogToServer.getRequest("list is cleared.");
                     if(List_file != null)
                         List_file.clear();
                     brandName.setText("(無)");
                     myAdapter.notifyDataSetChanged();
-                    nextBrandAdapter.clear();
+                    nextBrandArray.clear();
+                    nextBrandAdapter.notifyDataSetChanged();
                     //nextBrandAdapter = new ArrayAdapter<String>(MainActivity.this,  android.R.layout.simple_spinner_dropdown_item, nextBrandArray);
                 } else if(active && s!=null && s.contains("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
                     s = s.replaceAll("UPDATE_BOX\t", "");

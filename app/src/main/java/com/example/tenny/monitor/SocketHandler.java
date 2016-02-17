@@ -81,7 +81,6 @@ public class SocketHandler {
                     }
                     //to test if <END> received
                     String s= new String(readbyte, 0, i);
-                    readbyte = null;
                     readbyte = new byte[8192];
                     Log.d("Mylog", "i=" + i + ", s="+s);
                     if(s.contains("<END>"))
