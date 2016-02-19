@@ -15,6 +15,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.sql.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -49,15 +50,13 @@ public class SocketHandler {
         catch (UnknownHostException e)
         {
             System.out.println("Error0: UnknownHostException, "+e.getMessage());
-            try { LogToServer.getRequest("initSocket:UnknownHostException");
-            } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
+            LogToServer.getRequest("initSocket:UnknownHostException");
             MainActivity.restart();
         }
         catch(IOException e)
         {
             System.out.println("Error1: IOException, " + e.getMessage());
-            try { LogToServer.getRequest("initSocket:IOException");
-            } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
+            LogToServer.getRequest("initSocket:IOException");
             MainActivity.restart();
         }
         return socket;
@@ -71,9 +70,11 @@ public class SocketHandler {
         if(isCreated) {
             String result = "";
             int i;
-            List<Byte> buffer = new ArrayList<Byte>();;
-            //byte[] buffer = new byte[32768];
+            List<Byte> buffer = new ArrayList<Byte>();
+            buffer.clear();
+
             byte[] readbyte = new byte[8192];
+            Arrays.fill(readbyte, (byte) 0);
             try {
                 while((i=in.read(readbyte)) != -1) {
                     for(int j=0; j<i; j++) {
@@ -81,15 +82,19 @@ public class SocketHandler {
                     }
                     //to test if <END> received
                     String s= new String(readbyte, 0, i);
-                    readbyte = new byte[8192];
+                    Arrays.fill(readbyte, (byte) 0);
                     Log.d("Mylog", "i=" + i + ", s="+s);
                     if(s.contains("<END>"))
                         break;
                 }
+                if (i == -1) { //read() returns -1, the peer has closed the connection
+                    Log.e("mylog", "the peer has closed the connection");
+                    LogToServer.getRequest("ERROR: the peer has closed the connection");
+                    MainActivity.restart();
+                }
             } catch (IOException e) {
                 System.out.println("Error getOutput IOException: " + e.getMessage());
-                try { LogToServer.getRequest("getOutput:IOException");
-                } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
+                LogToServer.getRequest("getOutput:IOException");
                 MainActivity.restart();
             }
             result = byteListToString(buffer);
@@ -107,8 +112,7 @@ public class SocketHandler {
         }
         else {
             Log.e("Mylog", "socket not created, cant get output!");
-            try { LogToServer.getRequest("socket not created, cant get output!");
-            } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
+            LogToServer.getRequest("socket not created, cant get output!");
             return null;
         }
     }
@@ -119,15 +123,13 @@ public class SocketHandler {
                 out.write(s.getBytes());
             } catch (IOException e) {
                 System.out.println("Error writeToSocket IOException: " + e.getMessage());
-                try { LogToServer.getRequest(" writeToSocket:IOException");
-                } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
+                LogToServer.getRequest(" writeToSocket:IOException");
                 MainActivity.restart();
             }
         }
         else {
             Log.e("Mylog", "socket not created, cant write!");
-            try { LogToServer.getRequest(" socket not created, cant write!");
-            } catch (Exception exp) { Log.e("mylog", "SocketHandler:LogToServer error"); }
+            LogToServer.getRequest(" socket not created, cant write!");
         }
     }
 
