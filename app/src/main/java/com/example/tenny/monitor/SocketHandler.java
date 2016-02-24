@@ -13,12 +13,17 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.sql.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import javax.net.SocketFactory;
 
 public class SocketHandler {
     private static Socket socket = null;
@@ -40,25 +45,36 @@ public class SocketHandler {
         try {
             ip = SERVERIP;
             port = SERVERPORT;
-            socket = new Socket();
-            socket.connect(new InetSocketAddress(ip, port));
-            isCreated = true;
+            socket = SocketFactory.getDefault().createSocket();
+            SocketAddress remoteaddr = new InetSocketAddress(ip, port);
+            socket.connect(remoteaddr, 5000);
             in = socket.getInputStream();
             out = socket.getOutputStream();
             disconnectCount = 0;
         }
         catch (UnknownHostException e)
         {
-            System.out.println("Error0: UnknownHostException, "+e.getMessage());
+            isCreated = false;
+            Log.e("mylog", "Error0: UnknownHostException, " + e.getMessage());
             LogToServer.getRequest("initSocket:UnknownHostException");
-            MainActivity.restart();
+            MainActivity.restart("initSocket::UnknownHostException");
         }
         catch(IOException e)
         {
-            System.out.println("Error1: IOException, " + e.getMessage());
+            isCreated = false;
+            Log.e("mylog", "Error1: IOException, " + e.getMessage());
             LogToServer.getRequest("initSocket:IOException");
-            MainActivity.restart();
+            MainActivity.restart("initSocket::IOException");
         }
+
+        try {
+            socket.setSoTimeout(0);
+        } catch (SocketException e) {
+            Log.e("mylog", "Error: SocketException, " + e.getMessage());
+            LogToServer.getRequest("initSocket:SocketException");
+            MainActivity.restart("initSocket::SocketException");
+        }
+        isCreated = true;
         return socket;
     }
 
@@ -88,14 +104,23 @@ public class SocketHandler {
                         break;
                 }
                 if (i == -1) { //read() returns -1, the peer has closed the connection
+                    isCreated = false;
                     Log.e("mylog", "the peer has closed the connection");
                     LogToServer.getRequest("ERROR: the peer has closed the connection");
-                    MainActivity.restart();
+                    MainActivity.restart("getOutput::read() returns -1");
                 }
+            } catch (SocketTimeoutException e) {
+                Log.e("mylog", "Error getOutput SocketTimeoutException: " + e.getMessage());
+                LogToServer.getRequest("getOutput:SocketTimeoutException");
+                MainActivity.restart("getOutput::SocketTimeoutException");
             } catch (IOException e) {
-                System.out.println("Error getOutput IOException: " + e.getMessage());
+                Log.e("mylog", "Error getOutput IOException: " + e.getMessage());
                 LogToServer.getRequest("getOutput:IOException");
-                MainActivity.restart();
+                MainActivity.restart("getOutput::IOException");
+            } catch (Exception e) {
+                e.printStackTrace();
+                LogToServer.getRequest("writeToSocket:Exception?");
+                MainActivity.restart("writeToSocket:Exception?");
             }
             result = byteListToString(buffer);
             if (result == null || result.length() == 0) {
@@ -106,13 +131,14 @@ public class SocketHandler {
             if (disconnectCount >= 10) {
                 LogToServer.getRequest("無回應>=10次, need to reboot!");
                 Log.e("Mylog", "socket disconnectCount >= 10 !");
-                MainActivity.restart();
+                MainActivity.restart("getOutput::disconnectCount >= 10");
             }
             return result;
         }
         else {
             Log.e("Mylog", "socket not created, cant get output!");
             LogToServer.getRequest("socket not created, cant get output!");
+            MainActivity.restart("getOutput::socket not created");
             return null;
         }
     }
@@ -123,8 +149,12 @@ public class SocketHandler {
                 out.write(s.getBytes());
             } catch (IOException e) {
                 System.out.println("Error writeToSocket IOException: " + e.getMessage());
-                LogToServer.getRequest(" writeToSocket:IOException");
-                MainActivity.restart();
+                LogToServer.getRequest("writeToSocket:IOException");
+                MainActivity.restart("writeToSocket:IOException");
+            } catch (Exception e) {
+                e.printStackTrace();
+                LogToServer.getRequest("writeToSocket:Exception?");
+                MainActivity.restart("writeToSocket:Exception?");
             }
         }
         else {

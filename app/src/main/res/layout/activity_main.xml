@@ -117,7 +117,7 @@
                     android:layout_alignParentBottom="true"
                     android:layout_centerHorizontal="true"
                     android:textSize="36sp"
-                    android:format24Hour="'現在時間 'MMM dd, aah:mm:ss"
+                    android:format24Hour="'現在時間 'MMM dd日, aah:mm:ss"
                     android:layout_marginBottom="36dp" />
 
                 <TextView

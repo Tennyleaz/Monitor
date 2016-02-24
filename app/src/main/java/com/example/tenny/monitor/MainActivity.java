@@ -31,6 +31,7 @@ import android.widget.TabWidget;
 import android.widget.TextView;
 import com.google.zxing.WriterException;
 
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -39,7 +40,7 @@ public class MainActivity extends Activity {
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static final String VERSION = "2.15";
+    static final String VERSION = "2.16";
     public static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
@@ -70,6 +71,7 @@ public class MainActivity extends Activity {
 
     private static Context staticContext;
     private static Activity staticActivity;
+    private static boolean restarting = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,9 +79,10 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         staticContext = getApplicationContext();
         staticActivity = this;
+        restarting = false;
         final SharedPreferences settings = getApplicationContext().getSharedPreferences("EC510", 0);
         BOARD_ID = settings.getString("board_name", "CM") + "_" + settings.getString("board_ID", "1") + "_M";
-        Log.d("mylog", "BOARD_ID=" + BOARD_ID);
+        Log.d("mylog", "========== App started. BOARD_ID=" + BOARD_ID);
         TextView board_id = (TextView) findViewById(R.id.board_id);
         if(BOARD_ID.contains("CM"))
             board_id.setText("捲菸機" + settings.getString("board_ID", "1") + " v" + VERSION);
@@ -245,17 +248,22 @@ public class MainActivity extends Activity {
                     //dialog.dismiss();
                 }
             });*/
-                        pd.show();
+                try {
+                    pd.show();
+                } catch ( Exception e) {
+                    e.printStackTrace();
+                }
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
                         InitServer();
+                        Log.d("mylog", "After InitServer finished, to start handler");
                         handler.sendEmptyMessage(0);// 執行耗時的方法之後發送消給handler
                     }
                 }).start();
-                new Thread(new Runnable() {
+                /*new Thread(new Runnable() {
                     @Override
-                    public void run() {  // 需要背景作的事
+                    public void run() {
                         try {
                             for (int i = 0; i < 10; i++) {
                                 Thread.sleep(1000);
@@ -271,16 +279,16 @@ public class MainActivity extends Activity {
                                 ServerDownHandler.sendEmptyMessage(0);
                         }
                     }
-                }).start();
+                }).start();*/
             }
         } catch (Exception e) {
             Log.e("mylog", "exception in onCreate");
         }
-        task = new UpdateTask().execute();
+        //task = new UpdateTask().execute();
     }
 
     private void InitServer() {
-        SocketHandler.closeSocket();
+        Log.d("mylog", "InitServer start");
         SocketHandler.initSocket(SERVERIP, SERVERPORT);
         String init = "CONNECT\t" + BOARD_ID + "<END>";
         SocketHandler.writeToSocket(init);
@@ -290,6 +298,7 @@ public class MainActivity extends Activity {
         SocketHandler.writeToSocket(q);
         if(recipe_map == null)
             recipe_map = new HashMap<String, String>();
+        Log.d("mylog", "InitServer finished");
     }
 
     private boolean isNetworkConnected() {
@@ -302,7 +311,7 @@ public class MainActivity extends Activity {
         @Override
         public void handleMessage(Message msg) {// handler接收到消息後就會執行此方法
             updateUI();
-            pd.dismiss();// 關閉ProgressDialog
+            //pd.dismiss();// 關閉ProgressDialog
         }
     };
 
@@ -310,7 +319,11 @@ public class MainActivity extends Activity {
         @Override
         public void handleMessage(Message msg) {// handler接收到消息後就會執行此方法
             Log.e("Mylog", "ServerDownHandler: connect failed!");
-            if(pd!=null) pd.dismiss();// 關閉ProgressDialog
+            if(pd!=null) {
+                try {
+                    pd.dismiss();// 關閉ProgressDialog
+                } catch (Exception e) {e.printStackTrace();}
+            }
             if(dialog!=null && dialog.isShowing()) return;
             if(connected) return;
             if(active) {
@@ -326,10 +339,12 @@ public class MainActivity extends Activity {
                                 Log.d("mylog", "to finish task...");
                             }
                         });
-                dialog.show();
+                try {
+                    dialog.show();
+                }catch (Exception e) {e.printStackTrace();}
             }
             //notOnstop = true;
-            LogToServer.getRequest("prepare to restart...");
+            LogToServer.getRequest("ServerDownHandler: prepare to restart...");
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -347,10 +362,22 @@ public class MainActivity extends Activity {
                     Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
                     for (Thread t : threads) {
                         if(t!=null) {
+                            if(t.getId()==Thread.currentThread().getId()) continue;
                             Log.e("mylog", "force interrupt a thread");
                             t.interrupt();
                         }
                     }
+                    for (Thread t : threads) {
+                        if(t!=null) {
+                            if(t.getId()==Thread.currentThread().getId()) continue;
+                            try {
+                                t.join();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
                     Log.d("mylog", "ServerDownHandler to start intent.");
                     Intent intent = new Intent(MainActivity.this, MainActivity.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -364,11 +391,61 @@ public class MainActivity extends Activity {
     };
 
     private void updateUI() {
+        Log.d("mylog", "updateUI start.");
         if(str1 != null && str1.contains("CONNECT_OK")) {
             connectState.setText("伺服器辨識成功");
             LogToServer.getRequest("伺服器辨識成功");
             connectState.setTextColor(getResources().getColor(R.color.green));
             connected = true;
+            mySeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
+                    if (seekBar.getProgress() > SEEK_DEST) {
+                    /*if (List_file != null)
+                        List_file.clear();*/
+                        brandSelector.setSelection(0);
+                        myAdapter.notifyDataSetChanged();
+                        swapTitle.setText("目前無換牌指令");
+                        swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
+                        swapMsg.setText("");
+                        swapMsg.setVisibility(View.INVISIBLE);
+                        seekBar.setProgress(5);
+                        seekBar.setEnabled(false);
+                        mySeekBar.setVisibility(View.GONE);
+                        mySeekBar.setEnabled(false);
+                        swapEnd = true;
+                        swapWorking = false;
+                        bname = "";
+                        brandName.setText(bname);
+                        btn_enter.setEnabled(false);
+                        workerID.setText("");
+                        if (task != null) {
+                            Log.d("Mylog", "task is: " + task.getStatus());
+                            task.cancel(true);
+                        }
+                        task = new UpdateTask().execute();
+                        Log.d("Mylog", "swap end.");
+                        LogToServer.getRequest("swap 拖動完成");
+                        //swapWorking = false;
+                    } else {
+                        seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
+                        seekBar.setProgress(5);  //go back to zero
+                    }
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {  /* 開始拖動時觸發*/ }
+
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {  //進度改變時觸發  只要在拖動，就會重複觸發
+                    if (progress > SEEK_DEST)
+                        seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider_ok, null));
+                    else
+                        seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
+                }
+            });
+
+            task = new UpdateTask().execute();
         } else {
             if(str1 != null) {
                 connectState.setText(str1);
@@ -379,54 +456,8 @@ public class MainActivity extends Activity {
             connected = false;
         }
         msg.setText("no message");
-
-        mySeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {  //結束拖動時觸發
-                if (seekBar.getProgress() > SEEK_DEST) {
-                    /*if (List_file != null)
-                        List_file.clear();*/
-                    brandSelector.setSelection(0);
-                    myAdapter.notifyDataSetChanged();
-                    swapTitle.setText("目前無換牌指令");
-                    swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
-                    swapMsg.setText("");
-                    swapMsg.setVisibility(View.INVISIBLE);
-                    seekBar.setProgress(5);
-                    seekBar.setEnabled(false);
-                    mySeekBar.setVisibility(View.GONE);
-                    mySeekBar.setEnabled(false);
-                    swapEnd = true;
-                    swapWorking = false;
-                    bname = "";
-                    brandName.setText(bname);
-                    btn_enter.setEnabled(false);
-                    workerID.setText("");
-                    if (task != null) {
-                        Log.d("Mylog", "task is: " + task.getStatus());
-                        task.cancel(true);
-                    }
-                    task = new UpdateTask().execute();
-                    Log.d("Mylog", "swap end.");
-                    LogToServer.getRequest("swap 拖動完成");
-                    //swapWorking = false;
-                } else {
-                    seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
-                    seekBar.setProgress(5);  //go back to zero
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {  /* 開始拖動時觸發*/ }
-
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {  //進度改變時觸發  只要在拖動，就會重複觸發
-                if (progress > SEEK_DEST)
-                    seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider_ok, null));
-                else
-                    seekBar.setThumb(ResourcesCompat.getDrawable(getResources(), R.drawable.slider, null));
-            }
-        });
+        Log.d("mylog", "updateUI finished. to dismiss pd");
+        pd.dismiss();
     }
 
     private View.OnClickListener deleteListener = new View.OnClickListener() {
@@ -481,6 +512,10 @@ public class MainActivity extends Activity {
             //LogToServer.d("Mylog", "UpdateTask listening0...");
             while(!isCancelled()) {
                 if(!isNetworkConnected()) break;
+                if(!connected) {
+                    Log.d("mylog", "doInBackground: not connected");
+                    break;
+                }
                 //LogToServer.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
                 if(swapEnd) {
                     LogToServer.getRequest("換牌操作結束，準備送回server...");
@@ -812,7 +847,7 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("QUERY_REPLY\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
-                    Log.d("mylog", "new RECIPE_LIST=" + s);
+                    //Log.d("mylog", "new RECIPE_LIST=" + s);
                     LogToServer.getRequest("new RECIPE_LIST");
                     String[] items = s.split("\n");
                     if(recipe_map == null)
@@ -835,10 +870,10 @@ public class MainActivity extends Activity {
                         System.out.println(key + " : " + recipe_map.get(key));
                     }*/
                 }
-                if (s!=null && s.contains("CONNECT_OK")) {
+                /*if (s!=null && s.contains("CONNECT_OK")) {
                     active = true;
                     connected = true;
-                }
+                }*/
             }
             if(updateList) {
                 myAdapter = new MySimpleArrayAdapter(MainActivity.this, List_file);
@@ -896,9 +931,22 @@ public class MainActivity extends Activity {
                 if (pd != null)
                     pd.dismiss();
                 Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
-                Thread.enumerate(threads);
                 for (Thread t : threads) {
-                    t.interrupt();
+                    if(t!=null) {
+                        if(t.getId()==Thread.currentThread().getId()) continue;
+                        Log.e("mylog", "force interrupt a thread");
+                        t.interrupt();
+                    }
+                }
+                for (Thread t : threads) {
+                    if(t!=null) {
+                        if(t.getId()==Thread.currentThread().getId()) continue;
+                        try {
+                            t.join();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
                 Log.d("mylog", "KEYCODE_VOLUME_UP key long press!");
                 LogToServer.getRequest("to change ID");
@@ -939,6 +987,7 @@ public class MainActivity extends Activity {
         }*/
         Log.d("mylog", "onStop is called");
         LogToServer.getRequest("onStop is called");
+        //SocketHandler.closeSocket();
         //Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
         /*Thread.enumerate(threads);
         for (Thread t : threads) {
@@ -946,31 +995,59 @@ public class MainActivity extends Activity {
             t.interrupt();
         }*/
         rebootCount = "";
-        active = false;
-        task.cancel(true);
+        //active = false;
+        //task.cancel(true);
+        /*try{
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/
         super.onStop();
     }
 
-    public static void restart() {
+    public static synchronized void restart(String caller) {
+        if(restarting) {
+            Log.d("mylog", "restart is already called, return");
+            return;
+        }
+        restarting = true;
         LogToServer.getRequest("Socket ERROR, restart is called!");
-        Log.e("mylog", "restart is called");
+        Log.e("mylog", "restart is called\n called by: " + caller);
         try{
-            Thread.sleep(500);
+            Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         if(staticContext == null) return;
         rebootCount = "";
         active = false;
-        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
-        Thread.enumerate(threads);
-        for (Thread t : threads) {
-            Log.d("mylog", "restart interrupt a thread");
-            t.interrupt();
+        if(task!=null) {
+            task.cancel(true);
+            Log.d("mylog", "restart() cancel task");
         }
+        Thread[] threads = new Thread[Thread.activeCount()];  //close all running threads
+        for (Thread t : threads) {
+            if(t!=null) {
+                if(t.getId()==Thread.currentThread().getId()) continue;
+                Log.e("mylog", "force interrupt a thread");
+                t.interrupt();
+            }
+        }
+        for (Thread t : threads) {
+            if(t!=null) {
+                if(t.getId()==Thread.currentThread().getId()) continue;
+                try {
+                    t.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        SocketHandler.closeSocket();
         Intent intent = new Intent(staticContext, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         staticContext.startActivity(intent);
         staticActivity.finish();
+        Log.d("mylog", "restart end");
     }
 }

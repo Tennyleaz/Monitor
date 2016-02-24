@@ -67,9 +67,14 @@ public class ChangeID extends Activity {
                 editor.putString("board_ID", ID);
                 // Apply the edits!
                 editor.apply();
-                Intent intent = new Intent(ChangeID.this, MainActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
+                //Intent intent = new Intent(ChangeID.this, MainActivity.class);
+                //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                //startActivity(intent);
+                try{
+                    Thread.sleep(400);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 finish();
             }
         });
