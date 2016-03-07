@@ -64,11 +64,11 @@ public class LogToServer {
     public static synchronized void getRequest(String words) {
         final String site = "http://192.168.1.250/wlog.php?";//"http://140.113.167.14/wlog.php?";
         final String ID = MainActivity.BOARD_ID;
-        //if (words.contains("分行:UPDATE")) return;
+        if (words.contains("分行:UPDATE")) return;
         //words = words.replaceAll("<END>", "");
         //words = words.replaceAll("<N>", "&nbsp;");
-        words = words.replaceAll("<", "&lt;");
-        words = words.replaceAll(">", "&gt;");
+        words = words.replaceAll("<", "〈");
+        words = words.replaceAll(">", "〉");
         final String msg = words;
         new Thread(new Runnable() {
             @Override
@@ -81,7 +81,7 @@ public class LogToServer {
                         //logcount++;
                         URL url = new URL(mySite);
                         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                        conn.setConnectTimeout(700);
+                        conn.setConnectTimeout(500);
                         conn.setRequestMethod("GET");
                         BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 

@@ -29,6 +29,9 @@ import android.widget.Spinner;
 import android.widget.TabHost;
 import android.widget.TabWidget;
 import android.widget.TextView;
+
+import com.github.anrwatchdog.ANRError;
+import com.github.anrwatchdog.ANRWatchDog;
 import com.google.zxing.WriterException;
 
 import java.net.SocketException;
@@ -201,6 +204,10 @@ public class MainActivity extends Activity {
         tabView = tabWidget.getChildTabViewAt(1);
         tab = (TextView)tabView.findViewById(android.R.id.title);
         tab.setTextSize(24);
+
+        if (!BuildConfig.DEBUG) {
+            new ANRWatchDog(8000).start();
+        }
 
         try {
             if (!isNetworkConnected()) {  //close when not connected
@@ -509,77 +516,83 @@ public class MainActivity extends Activity {
         private Object lock = new Object();
         @Override
         protected String doInBackground(Void... v) {
-            //LogToServer.d("Mylog", "UpdateTask listening0...");
-            while(!isCancelled()) {
-                if(!isNetworkConnected()) break;
-                if(!connected) {
-                    Log.d("mylog", "doInBackground: not connected");
-                    break;
-                }
-                //LogToServer.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
-                if(swapEnd) {
-                    LogToServer.getRequest("換牌操作結束，準備送回server...");
-                    Log.d("Mylog", "prepare to send SWAP OK, ID=" + returnWorkerID);
-                    String s = "SWAP_OK\t" + returnWorkerID +"<END>";
-                    SocketHandler.writeToSocket(s);
-                    swapWorking = false;
-                    swapEnd = false;
-                    returnWorkerID = "";
-                    Log.d("Mylog", "swapWorking -> false");
-                    continue;
-                }
-                if(swapWorking) {
-                    Log.e("Mylog", "break!");
-                    LogToServer.getRequest("已確認換牌通知，正在等候操作...");
-                    break;
-                }
-                //if(connectionTimeoutCount >= 11)
-                //    break;
-                if(bc_msg_reply) {
-                    Log.d("Mylog", "to send BC_MSG_OK<END>");
-                    String s = "BC_MSG_OK<END>";
-                    SocketHandler.writeToSocket(s);
-                    bc_msg_reply = false;
-                    bc_msgWorking = false;
-                    Log.d("Mylog", "BC_MSG_OK");
-                    LogToServer.getRequest("確認收到BC MSG");
-                }
-                if(swap_msg_reply) {
-                    Log.d("Mylog", "to send SWAP_MSG_OK<END>");
-                    String s = "SWAP_MSG_OK<END>";
-                    SocketHandler.writeToSocket(s);
-                    swap_msg_reply = false;
-                    swap_msgWorking = false;
-                    Log.d("Mylog", "SWAP_MSG_OK");
-                    LogToServer.getRequest("確認收到SWAP MSG");
-                }
-                if(bc_msgWorking || swap_msgWorking)
-                    continue;
+            try {
+                while (!isCancelled()) {
+                    if (!isNetworkConnected()) break;
+                    if (!connected) {
+                        Log.d("mylog", "doInBackground: not connected");
+                        break;
+                    }
+                    //LogToServer.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
+                    if (swapEnd) {
+                        LogToServer.getRequest("換牌操作結束，準備送SWAP_OK回server...");
+                        Log.d("Mylog", "prepare to send SWAP OK, ID=" + returnWorkerID);
+                        String s = "SWAP_OK\t" + returnWorkerID + "<END>";
+                        SocketHandler.writeToSocket(s);
+                        swapWorking = false;
+                        swapEnd = false;
+                        returnWorkerID = "";
+                        Log.d("Mylog", "swapWorking -> false");
+                        LogToServer.getRequest("SWAP_OK已經送出.");
+                        continue;
+                    }
+                    if (swapWorking) {
+                        Log.e("Mylog", "break!");
+                        LogToServer.getRequest("已確認換牌通知，正在等候操作按確定...");
+                        break;
+                    }
+                    //if(connectionTimeoutCount >= 11)
+                    //    break;
+                    if (bc_msg_reply) {
+                        Log.d("Mylog", "to send BC_MSG_OK<END>");
+                        String s = "BC_MSG_OK<END>";
+                        SocketHandler.writeToSocket(s);
+                        bc_msg_reply = false;
+                        bc_msgWorking = false;
+                        Log.d("Mylog", "BC_MSG_OK");
+                        LogToServer.getRequest("確認收到BC MSG");
+                    }
+                    if (swap_msg_reply) {
+                        Log.d("Mylog", "to send SWAP_MSG_OK<END>");
+                        String s = "SWAP_MSG_OK<END>";
+                        SocketHandler.writeToSocket(s);
+                        swap_msg_reply = false;
+                        swap_msgWorking = false;
+                        Log.d("Mylog", "SWAP_MSG_OK");
+                        LogToServer.getRequest("確認收到SWAP MSG");
+                    }
+                    if (bc_msgWorking || swap_msgWorking)
+                        continue;
 
-                Log.e("Mylog", "UpdateTask listening...");
-                final String result = SocketHandler.getOutput();
-                publishProgress(result);
-                Log.d("Mylog", "result=" + result);
-                //if (result == null || result.isEmpty() || result.equals(""))
-                //    //connectionTimeoutCount++;
-                //else
-                //    connectionTimeoutCount = 0;
-                //
+                    Log.e("Mylog", "UpdateTask listening...");
+                    final String result = SocketHandler.getOutput();
+                    publishProgress(result);
+                    Log.d("Mylog", "result=" + result);
+                    //if (result == null || result.isEmpty() || result.equals(""))
+                    //    //connectionTimeoutCount++;
+                    //else
+                    //    connectionTimeoutCount = 0;
+                    //
                 /*try {
                     Thread.currentThread();
                     Thread.sleep(500);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }*/
-                try {
-                    synchronized(lock) {
-                        lock.wait(1800);
+                    try {
+                        synchronized (lock) {
+                            lock.wait(1900);
+                        }
+                    } catch (InterruptedException e) {
+                        Log.e("mylog", "wait is interrupted");
+                        LogToServer.getRequest("ERROR: lock.wait() is interrupted " + e);
+                        e.printStackTrace();
                     }
-                } catch (InterruptedException e) {
-                    Log.e("mylog", "wait is interrupted");
-                    LogToServer.getRequest("ERROR: lock.wait() is interrupted " + e);
-                    e.printStackTrace();
                 }
+            } catch (ANRError e) {
+                e.printStackTrace();
+                LogToServer.getRequest("ERROR: ANRError in doInBackground " + e);
+                restart("Do In Background ANR error");
             }
             return null;
         }
