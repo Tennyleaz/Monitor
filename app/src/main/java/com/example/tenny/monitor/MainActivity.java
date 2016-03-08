@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static final String VERSION = "2.16";
+    static final String VERSION = "2.17test";
     public static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
@@ -205,9 +205,18 @@ public class MainActivity extends Activity {
         tab = (TextView)tabView.findViewById(android.R.id.title);
         tab.setTextSize(24);
 
-        if (!BuildConfig.DEBUG) {
-            new ANRWatchDog(8000).start();
-        }
+        //if (!BuildConfig.DEBUG) {
+        new ANRWatchDog(8000).setANRListener(new ANRWatchDog.ANRListener() {
+            @Override
+            public void onAppNotResponding(ANRError error) {
+                // Handle the error. For example, log it to HockeyApp:
+                Log.e("mylog", "ERROR: watchdog: onAppNotResponding!");
+                LogToServer.getRequest("ERROR: watchdog: onAppNotResponding!");
+                restart("ANRWatchDog");
+            }
+        }).start();
+        Log.d("mylog", "ANR watchdog started.");
+        //}
 
         try {
             if (!isNetworkConnected()) {  //close when not connected
@@ -513,10 +522,9 @@ public class MainActivity extends Activity {
     };
 
     private class UpdateTask extends AsyncTask<Void, String, String> {
-        private Object lock = new Object();
+        final private Object lock = new Object();
         @Override
         protected String doInBackground(Void... v) {
-            try {
                 while (!isCancelled()) {
                     if (!isNetworkConnected()) break;
                     if (!connected) {
@@ -581,7 +589,7 @@ public class MainActivity extends Activity {
                 }*/
                     try {
                         synchronized (lock) {
-                            lock.wait(1900);
+                            lock.wait(1500);
                         }
                     } catch (InterruptedException e) {
                         Log.e("mylog", "wait is interrupted");
@@ -589,11 +597,6 @@ public class MainActivity extends Activity {
                         e.printStackTrace();
                     }
                 }
-            } catch (ANRError e) {
-                e.printStackTrace();
-                LogToServer.getRequest("ERROR: ANRError in doInBackground " + e);
-                restart("Do In Background ANR error");
-            }
             return null;
         }
         @Override
@@ -793,6 +796,7 @@ public class MainActivity extends Activity {
                     AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
                     dialog.setTitle("警告");
                     dialog.setMessage(setDialogText("已下達換牌指令！", 3));
+                    dialog.setCancelable(false);
                     dialog.setPositiveButton("OK",
                             new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialoginterface, int i) {

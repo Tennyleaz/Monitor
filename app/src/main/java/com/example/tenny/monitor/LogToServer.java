@@ -81,7 +81,7 @@ public class LogToServer {
                         //logcount++;
                         URL url = new URL(mySite);
                         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                        conn.setConnectTimeout(500);
+                        conn.setConnectTimeout(400);
                         conn.setRequestMethod("GET");
                         BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
