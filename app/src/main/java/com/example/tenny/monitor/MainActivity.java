@@ -39,7 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
@@ -1028,7 +1028,7 @@ public class MainActivity extends Activity {
             return;
         }
         restarting = true;
-        LogToServer.getRequest("Socket ERROR, restart is called!");
+        LogToServer.getRequest("Socket ERROR, restart is called by: " + caller);
         Log.e("mylog", "restart is called\n called by: " + caller);
         try{
             Thread.sleep(100);
