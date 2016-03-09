@@ -1035,7 +1035,10 @@ public class MainActivity extends Activity {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        if(staticContext == null) return;
+        if(staticContext == null) {
+            restarting = false;
+            return;
+        }
         rebootCount = "";
         active = false;
         if(task!=null) {
