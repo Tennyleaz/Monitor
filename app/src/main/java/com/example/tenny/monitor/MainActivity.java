@@ -657,9 +657,9 @@ public class MainActivity extends Activity {
                     }
                 } else if(s.startsWith("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
                     s = s.replaceAll("UPDATE_BOX\t", "");
-                    s = s.replaceAll("<N>", "\n");
+                    //s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
-                    String[] items = s.split("\n");
+                    String[] items = s.split("<N>");
                     for(String i: items) {
                         //Log.d("Mylog","line i=" + i);
                         String[] single_item = i.split("\t");
@@ -672,9 +672,9 @@ public class MainActivity extends Activity {
                     boxAdapter.notifyDataSetChanged();
                 } else if(s.startsWith("UPDATE_VALUE\t")) {  //時間\t線號\t品牌名稱\t重量max\t重量value\t重量min\t圓周max\t圓周value\t圓周min\t透氣率max\t透氣率value\t透氣率min
                     s = s.replaceAll("UPDATE_VALUE\t", "");
-                    s = s.replaceAll("<N>", "\n");
+                    //s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
-                    String[] items = s.split("\n");
+                    String[] items = s.split("<N>");
                     for(String i: items) {
                         //Log.d("Mylog","line i=" + i);
                         String[] single_item = i.split("\t");
@@ -731,9 +731,9 @@ public class MainActivity extends Activity {
                     nextBrandArray.clear();
                     nextBrandAdapter.notifyDataSetChanged();
                     s = s.replaceAll("LIST\t", "");
-                    s = s.replaceAll("<N>", "\n");
+                    //s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
-                    String[] items = s.split("\n");
+                    String[] items = s.split("<N>");
                     for (String i : items) {
                         //Log.d("Mylog", "line i=" + i);
                         String[] single_item = i.split("\t");
@@ -808,11 +808,11 @@ public class MainActivity extends Activity {
                     //nextBrandAdapter = new ArrayAdapter<String>(MainActivity.this,  android.R.layout.simple_spinner_dropdown_item, nextBrandArray);
                 }  else if (s.startsWith("QUERY_REPLY\t")) {
                     s = s.replaceAll("QUERY_REPLY\t", "");
-                    s = s.replaceAll("<N>", "\n");
+                    //s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     //Log.d("mylog", "new RECIPE_LIST=" + s);
                     LogToServer.getRequest("new RECIPE_LIST");
-                    String[] items = s.split("\n");
+                    String[] items = s.split("<N>");
                     if(recipe_map == null)
                         recipe_map = new HashMap<String, String>();
                     for(String i: items) {
