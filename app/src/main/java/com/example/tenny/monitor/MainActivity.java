@@ -39,11 +39,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
-    static final String SERVERIP = "140.113.167.14";//"192.168.1.30";
+    static final String SERVERIP = "192.168.1.250";//"140.113.167.14";
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static final String VERSION = "2.17test";
+    static final String VERSION = "2.19test";
     public static String BOARD_ID = "CM_1_M";
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     private static AsyncTask task = null;
     private String str1, bname, returnWorkerID, key;
     private SeekBar mySeekBar;
-    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false, swap_msgWorking=false, swap_msg_reply=false;
+    private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false, swap_msgWorking=false, swap_msg_reply=false, msgRequest=false;
     private ListView firstlist, valueListView, boxListView;
     private MySimpleArrayAdapter myAdapter;
     private ValueAdapter valueAdapter;
@@ -101,8 +101,18 @@ public class MainActivity extends Activity {
         //        t.interrupt();
         //    }
         //}
-        LogToServer.getRequest("========== App started. BOARD_ID=" + BOARD_ID + " v" + VERSION  + " ==========");
-        //LogToServer.getRequest("test");
+        Bundle extras = getIntent().getExtras();
+        int restartCause = 0;
+        if (extras != null) {
+            restartCause = extras.getInt("restartCause", 0);
+        }
+        if(restartCause == 1)
+            LogToServer.getRequest("========== App restarted by restart(). BOARD_ID=" + BOARD_ID + " v" + VERSION  + " ==========");
+        else if (restartCause == 2)
+            LogToServer.getRequest("========== App restarted by ServerDownHandler. BOARD_ID=" + BOARD_ID + " v" + VERSION  + " ==========");
+        else
+            LogToServer.getRequest("========== App started. BOARD_ID=" + BOARD_ID + " v" + VERSION  + " ==========");
+
 
         connectState = (TextView) findViewById(R.id.connectState);
         msg = (ScrollForeverTextView) findViewById(R.id.msg);
@@ -122,9 +132,6 @@ public class MainActivity extends Activity {
         brandName = (TextView) findViewById(R.id.brandName);
         firstlist = (ListView) findViewById(R.id.listView2);
         //connectionTimeoutCount = 0;
-        //tempSwapMessage = null;
-        //TextClock tc= (TextClock) findViewById(R.id.textClock);
-        //tc.setFormat24Hour();
         returnWorkerID = "";
         brandSelector = (Spinner) findViewById(R.id.brandSelecter);
         nextBrandArray = new ArrayList<String>();
@@ -164,9 +171,6 @@ public class MainActivity extends Activity {
         btn_enter.setEnabled(false);
         btn_delete = (Button) findViewById(R.id.btn_del);
         btn_delete.setOnClickListener(deleteListener);
-        //table1 = (TableLayout) findViewById(R.id.tab1table);
-        //table2 = (TableLayout) findViewById(R.id.tab2layout);
-        //boxRowCount = 0;
         valueListView = (ListView) findViewById(R.id.valueListView);
         boxListView = (ListView) findViewById(R.id.boxListView);
         valueArray = new ArrayList<ValueItem>();
@@ -206,7 +210,7 @@ public class MainActivity extends Activity {
         tab.setTextSize(24);
 
         //if (!BuildConfig.DEBUG) {
-        new ANRWatchDog(8000).setANRListener(new ANRWatchDog.ANRListener() {
+        new ANRWatchDog(4900).setANRListener(new ANRWatchDog.ANRListener() {
             @Override
             public void onAppNotResponding(ANRError error) {
                 // Handle the error. For example, log it to HockeyApp:
@@ -397,6 +401,7 @@ public class MainActivity extends Activity {
                     Log.d("mylog", "ServerDownHandler to start intent.");
                     Intent intent = new Intent(MainActivity.this, MainActivity.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    intent.putExtra("restartCause", 2);
                     startActivity(intent);
                     finish();
                     Log.d("mylog", "ServerDownHandler end.");
@@ -531,7 +536,9 @@ public class MainActivity extends Activity {
                         Log.d("mylog", "doInBackground: not connected");
                         break;
                     }
-                    //LogToServer.d("Mylog", "swapEnd=" + swapEnd + ", swapWorking=" + swapWorking + " bc_msg_reply=" +bc_msg_reply);
+                    if(msgRequest) {
+                        SocketHandler.writeToSocket("QUERY\tMSG<END>");
+                    }
                     if (swapEnd) {
                         LogToServer.getRequest("換牌操作結束，準備送SWAP_OK回server...");
                         Log.d("Mylog", "prepare to send SWAP OK, ID=" + returnWorkerID);
@@ -549,6 +556,7 @@ public class MainActivity extends Activity {
                         LogToServer.getRequest("已確認換牌通知，正在等候操作按確定...");
                         break;
                     }
+
                     //if(connectionTimeoutCount >= 11)
                     //    break;
                     if (bc_msg_reply) {
@@ -576,17 +584,6 @@ public class MainActivity extends Activity {
                     final String result = SocketHandler.getOutput();
                     publishProgress(result);
                     Log.d("Mylog", "result=" + result);
-                    //if (result == null || result.isEmpty() || result.equals(""))
-                    //    //connectionTimeoutCount++;
-                    //else
-                    //    connectionTimeoutCount = 0;
-                    //
-                /*try {
-                    Thread.currentThread();
-                    Thread.sleep(500);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }*/
                     try {
                         synchronized (lock) {
                             lock.wait(1500);
@@ -601,54 +598,8 @@ public class MainActivity extends Activity {
         }
         @Override
         protected void onProgressUpdate(String... values) {
-            /*if(connectionTimeoutCount >= 10) {
-                connected = false;
-                LogToServer.e("Mylog", "connect failed!");
-                if(dialog!=null && dialog.isShowing()) return;
-                if(active) {
-                    active = false;
-                    dialog = new AlertDialog.Builder(MainActivity.this).create();
-                    dialog.setTitle("警告");
-                    dialog.setMessage("伺服器無回應，\n5秒後自動重新連線，若問題持續請洽系統管理員");
-                    dialog.setButton(DialogInterface.BUTTON_POSITIVE, "關閉程式",
-                            new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialoginterface, int i) {
-                                    android.os.Process.killProcess(android.os.Process.myPid());
-                                    System.exit(1);
-                                    LogToServer.d("mylog", "to finish task...");
-                                }
-                            });
-                    dialog.show();
-                }
-                notOnstop = true;
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        LogToServer.d("mylog", "onProgressUpdate:wait 5000ms");
-                        try { Thread.sleep(5000); }
-                        catch (InterruptedException e) {
-                            LogToServer.e("mylog", "InterruptedException e=" + e.toString());
-                        }
-                        if(connected) return;
-                        if(dialog!=null && dialog.isShowing())
-                            dialog.cancel();
-                        if(task!=null) task.cancel(true);
-                        LogToServer.d("mylog", "onProgressUpdate:after 5000ms");
-                        Intent intent = new Intent(MainActivity.this, MainActivity.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        startActivity(intent);
-                        Thread[] threads = new Thread[Thread.activeCount()];
-                        for (Thread t : threads) {
-                            if(t!=null) {
-                                LogToServer.e("mylog", "force interrupt a thread");
-                                t.interrupt();
-                            }
-                        }
-                        LogToServer.d("mylog", "onProgressUpdate end.");
-                    }
-                }).start();
-                return;
-            }*/
+            if( msg.getText().equals("no message"))
+                msgRequest = true;
 
             final String result = values[0];
             if(result==null ||result.length() == 0) return;
@@ -656,14 +607,15 @@ public class MainActivity extends Activity {
             //Log.d("Mylog", "收到:" + result);
             final String[] lines = result.split("<END>");
 
-            //int length = lines.length;
             //Log.d("Mylog", "lines.length=" + length);
             boolean updateList = false;
             for(String s: lines) {
                 //notOnstop = true;
+                if(!active) break;
+                if(s == null) continue;
                 Log.d("Mylog", "s in line=" + s);
                 LogToServer.getRequest("分行:" + s);
-                if(active && s!=null && s.startsWith("SWAP_MSG\t")) {
+                if(s.startsWith("SWAP_MSG\t")) {
                     s = s.replaceAll("SWAP_MSG\t", "");
                     //swapMsg.setVisibility(View.VISIBLE);
                     //swapMsg.setText(s);
@@ -703,7 +655,39 @@ public class MainActivity extends Activity {
                         dialog.setCancelable(false);
                         dialog.show();
                     }
-                } else if(active && s!=null && s.startsWith("BC_MSG")) {  //廣播
+                } else if(s.startsWith("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
+                    s = s.replaceAll("UPDATE_BOX\t", "");
+                    s = s.replaceAll("<N>", "\n");
+                    s = s.replaceAll("<END>", "");
+                    String[] items = s.split("\n");
+                    for(String i: items) {
+                        //Log.d("Mylog","line i=" + i);
+                        String[] single_item = i.split("\t");
+                        if(single_item.length == 3) {
+                            int lineNumber = Integer.parseInt(single_item[0]) - 1;
+                            BoxItem b = new BoxItem(single_item[0], single_item[1], single_item[2]);
+                            boxArray.set(lineNumber, b);
+                        }
+                    }
+                    boxAdapter.notifyDataSetChanged();
+                } else if(s.startsWith("UPDATE_VALUE\t")) {  //時間\t線號\t品牌名稱\t重量max\t重量value\t重量min\t圓周max\t圓周value\t圓周min\t透氣率max\t透氣率value\t透氣率min
+                    s = s.replaceAll("UPDATE_VALUE\t", "");
+                    s = s.replaceAll("<N>", "\n");
+                    s = s.replaceAll("<END>", "");
+                    String[] items = s.split("\n");
+                    for(String i: items) {
+                        //Log.d("Mylog","line i=" + i);
+                        String[] single_item = i.split("\t");
+                        if(single_item.length == 12) {
+                            int lineNumber = Integer.parseInt(single_item[1]) - 1;
+                            String name = "生產線" + single_item[1] + " " + single_item[2];
+                            String time = "最後更新: " + single_item[0];
+                            ValueItem v = new ValueItem(name, single_item[3], single_item[4], single_item[5], single_item[6], single_item[7], single_item[8], single_item[9], single_item[10], single_item[11], time);
+                            valueArray.set(lineNumber, v);
+                        }
+                    }
+                    valueAdapter.notifyDataSetChanged();
+                } else if(s.startsWith("BC_MSG")) {  //廣播
                     bc_msgWorking = true;
                     Log.d("mylog", "inside BC_MSG");
                     s = s.replaceAll("BC_MSG\t", "");
@@ -719,13 +703,14 @@ public class MainActivity extends Activity {
                             });
                     dialog.setCancelable(false);
                     dialog.show();
-                } else if(active && s!=null && s.startsWith("MSG\t")) {
+                } else if(s.startsWith("MSG\t")) {
                     s = s.replaceAll("MSG\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
                     msg.setText(s);
+                    msgRequest = false;
                     LogToServer.getRequest("MSG已經更新");
-                } else if(active && s!=null && s.startsWith("UPDATE_LIST\t")) {
+                } else if(s.startsWith("UPDATE_LIST\t")) {
                     s = s.replaceAll("UPDATE_LIST\t", "");
                     String[] items = s.split("\t");
                     if(items.length >= 2 && List_file != null) {
@@ -738,7 +723,7 @@ public class MainActivity extends Activity {
                         }
                     }
                     LogToServer.getRequest("UPDATE_LIST 數目更新");
-                } else if(active && s != null && s.startsWith("LIST\t")) {
+                } else if(s.startsWith("LIST\t")) {
                     if (List_file == null)
                         List_file = new ArrayList<ListItem>();
                     else
@@ -768,7 +753,7 @@ public class MainActivity extends Activity {
                             List_file.add(singleItem);
                         }
                     }
-                } else if(active && s!=null && s.startsWith("SWAP")) {
+                } else if(s.startsWith("SWAP")) {
                     swapWorking = true;
                     Log.d("Mylog", "swap!!");
                     String[] items = s.split("\t");
@@ -800,10 +785,6 @@ public class MainActivity extends Activity {
                     dialog.setPositiveButton("OK",
                             new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialoginterface, int i) {
-                                    /*mySeekBar.setVisibility(View.VISIBLE);
-                                    mySeekBar.setEnabled(true);
-                                    swapTitle.setText("向右滑動切換品牌");
-                                    swapTitle.setTextColor(getResources().getColor(R.color.black));*/
                                     swapWorking = true;
                                     btn_enter.setEnabled(true);
                                     Log.d("Mylog", "OK pressed");
@@ -813,12 +794,9 @@ public class MainActivity extends Activity {
                             });
                     swapMsg.setText("請輸入品牌與員工ID");
                     Log.d("Mylog", "prepare to show dialog...");
-                    /*synchronized(lock) {
-                        lock.notifyAll();
-                    }*/
                     dialog.show();
                     LogToServer.getRequest("顯示換牌對話框");
-                } else if (active && s!=null && s.startsWith("LIST_EMPTY")) {
+                } else if (s.startsWith("LIST_EMPTY")) {
                     Log.d("Mylog", "clear!");
                     LogToServer.getRequest("list is cleared.");
                     if(List_file != null)
@@ -828,39 +806,7 @@ public class MainActivity extends Activity {
                     nextBrandArray.clear();
                     nextBrandAdapter.notifyDataSetChanged();
                     //nextBrandAdapter = new ArrayAdapter<String>(MainActivity.this,  android.R.layout.simple_spinner_dropdown_item, nextBrandArray);
-                } else if(active && s!=null && s.startsWith("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
-                    s = s.replaceAll("UPDATE_BOX\t", "");
-                    s = s.replaceAll("<N>", "\n");
-                    s = s.replaceAll("<END>", "");
-                    String[] items = s.split("\n");
-                    for(String i: items) {
-                        //Log.d("Mylog","line i=" + i);
-                        String[] single_item = i.split("\t");
-                        if(single_item.length == 3) {
-                            int lineNumber = Integer.parseInt(single_item[0]) - 1;
-                            BoxItem b = new BoxItem(single_item[0], single_item[1], single_item[2]);
-                            boxArray.set(lineNumber, b);
-                        }
-                    }
-                    boxAdapter.notifyDataSetChanged();
-                } else if(active && s!=null && s.startsWith("UPDATE_VALUE\t")) {  //時間\t線號\t品牌名稱\t重量max\t重量value\t重量min\t圓周max\t圓周value\t圓周min\t透氣率max\t透氣率value\t透氣率min
-                    s = s.replaceAll("UPDATE_VALUE\t", "");
-                    s = s.replaceAll("<N>", "\n");
-                    s = s.replaceAll("<END>", "");
-                    String[] items = s.split("\n");
-                    for(String i: items) {
-                        //Log.d("Mylog","line i=" + i);
-                        String[] single_item = i.split("\t");
-                        if(single_item.length == 12) {
-                            int lineNumber = Integer.parseInt(single_item[1]) - 1;
-                            String name = "生產線" + single_item[1] + " " + single_item[2];
-                            String time = "最後更新: " + single_item[0];
-                            ValueItem v = new ValueItem(name, single_item[3], single_item[4], single_item[5], single_item[6], single_item[7], single_item[8], single_item[9], single_item[10], single_item[11], time);
-                            valueArray.set(lineNumber, v);
-                        }
-                    }
-                    valueAdapter.notifyDataSetChanged();
-                } else if (active && s!=null && s.startsWith("QUERY_REPLY\t")) {
+                }  else if (s.startsWith("QUERY_REPLY\t")) {
                     s = s.replaceAll("QUERY_REPLY\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -882,10 +828,6 @@ public class MainActivity extends Activity {
                         nextBrandAdapter.notifyDataSetChanged();
                         key = null;
                     }
-                    /*System.out.println("recipe_map=");
-                    for (Object key : recipe_map.keySet()) {
-                        System.out.println(key + " : " + recipe_map.get(key));
-                    }*/
                 }
                 /*if (s!=null && s.contains("CONNECT_OK")) {
                     active = true;
@@ -898,7 +840,7 @@ public class MainActivity extends Activity {
             }
             try {
                 synchronized (lock) {
-                    lock.notifyAll();
+                    lock.notify();
                 }
             } catch (Exception e) {
                 Log.e("mylog", "notifyAll is interrupted");
@@ -1066,6 +1008,7 @@ public class MainActivity extends Activity {
         SocketHandler.closeSocket();
         Intent intent = new Intent(staticContext, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        intent.putExtra("restartCause", 1);
         staticContext.startActivity(intent);
         staticActivity.finish();
         Log.d("mylog", "restart end");

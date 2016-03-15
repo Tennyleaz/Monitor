@@ -33,6 +33,50 @@ public class SocketHandler {
     private static String ip;
     private static int port;
     private static int disconnectCount = 0;
+    private static Thread aliveCheckingThread, echoCheckingThread;
+    public static boolean hadEcho = false;
+
+    public static synchronized void startSocketAliveChecking() {
+        if(!isCreated) return;
+        aliveCheckingThread = new Thread(new Runnable() {
+            public void run() {
+                long threadId = Thread.currentThread().getId();
+                while(true) {
+                    writeToSocket("ECHO\tAliveCheck" + threadId + "<END>");
+                    Log.d("mylog", "ECHO send...");
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        echoCheckingThread = new Thread(new Runnable() {
+            public void run() {
+                while(true) {
+                    try {
+                        Thread.sleep(15000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    if (hadEcho) {
+                        hadEcho = false;  //go to sleep
+                        Log.e("echo", "has ECHO " + aliveCheckingThread.getState());
+                    }
+                    else {
+                        Log.e("echo", "ECHO not receive!");
+                        MainActivity.restart("ECHO not receive!");
+                    }
+                }
+            }
+        });
+        aliveCheckingThread.start();
+        echoCheckingThread.start();
+        LogToServer.getRequest("Start SocketAlive Checking.");
+        Log.d("mylog", "Start SocketAlive Checking.");
+    }
 
     public static synchronized Socket getSocket(){
         if(isCreated)
@@ -102,6 +146,10 @@ public class SocketHandler {
                     Log.d("Mylog", "i=" + i + ", s="+s);
                     if(s.contains("<END>"))
                         break;
+                    if(s.contains("ECHO_REPLY")) {
+                        hadEcho = true;
+                        Log.d("mylog", "hadEcho=" + hadEcho);
+                    }
                 }
                 if (i == -1) { //read() returns -1, the peer has closed the connection
                     isCreated = false;
@@ -163,6 +211,11 @@ public class SocketHandler {
         }
     }
 
+    /*public static synchronized boolean isSocketAlive() {
+        writeToSocket("test<END>");
+        return true;
+    }*/
+
     private static String byteListToString(List<Byte> l) {
         if (l == null) {
             return "";
@@ -201,5 +254,9 @@ public class SocketHandler {
                 System.out.println("Error4: " + e.getMessage());
             }
         }
+        if(aliveCheckingThread != null)
+            aliveCheckingThread.interrupt();
+        if(echoCheckingThread != null)
+            echoCheckingThread.interrupt();
     }
 }

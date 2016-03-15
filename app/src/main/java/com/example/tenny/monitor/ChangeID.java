@@ -53,7 +53,7 @@ public class ChangeID extends Activity {
         idArray.add("8");
         idArray.add("9");
         ArrayAdapter<String> nameAdapter = new ArrayAdapter<String>(ChangeID.this,  android.R.layout.simple_spinner_dropdown_item, nameArray);
-        ArrayAdapter<String> idAdapter = new ArrayAdapter<String>(ChangeID.this,  android.R.layout.simple_spinner_item, idArray);
+        ArrayAdapter<String> idAdapter = new ArrayAdapter<String>(ChangeID.this,  android.R.layout.simple_spinner_dropdown_item, idArray);
         nameSelect.setAdapter(nameAdapter);
         idSelect.setAdapter(idAdapter);
         btn.setOnClickListener(new View.OnClickListener() {

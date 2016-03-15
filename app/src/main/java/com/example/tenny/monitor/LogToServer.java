@@ -64,7 +64,7 @@ public class LogToServer {
     public static synchronized void getRequest(String words) {
         final String site = "http://192.168.1.250/wlog.php?";//"http://140.113.167.14/wlog.php?";
         final String ID = MainActivity.BOARD_ID;
-        if (words.contains("分行:UPDATE")) return;
+        if (words.contains("分行:UPDATE") || words.contains("分行:CMD_WRONG")) return;
         //words = words.replaceAll("<END>", "");
         //words = words.replaceAll("<N>", "&nbsp;");
         words = words.replaceAll("<", "〈");
