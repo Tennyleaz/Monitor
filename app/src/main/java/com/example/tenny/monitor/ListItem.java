@@ -9,13 +9,13 @@ public class ListItem {
     public String itemCount;
     public String productName;
     public String productSerial;
-    public Bitmap barcode;
+    //public Bitmap barcode;
 
-    public  ListItem(String productName, String productSerial, String itemCount, Bitmap barcode) {
+    public ListItem(String productName, String productSerial, String itemCount) {
         super();
         this.itemCount = itemCount;
         this.productName = productName;
         this.productSerial = productSerial;
-        this.barcode = barcode;
+        //this.barcode = barcode;
     }
 }

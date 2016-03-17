@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="0-0000000000"
+        android:id="@+id/barcodeText"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="5dp"
+        android:textSize="38dp" />
+
+    <ImageView
+        android:layout_width="600dp"
+        android:layout_height="200dp"
+        android:id="@+id/barcodeImg"
+        android:layout_marginTop="10dp"
+        android:src="@drawable/test"
+        android:layout_below="@+id/barcodeText"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="300dp"
+        android:layout_height="50dp"
+        android:text="關閉視窗"
+        android:id="@+id/buttonExit"
+        android:layout_below="@+id/barcodeImg"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="5dp"
+        android:textSize="20dp" />
+</RelativeLayout>

@@ -2,6 +2,7 @@ package com.example.tenny.monitor;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -23,6 +24,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -34,8 +36,8 @@ import com.github.anrwatchdog.ANRError;
 import com.github.anrwatchdog.ANRWatchDog;
 import com.google.zxing.WriterException;
 
-import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
@@ -43,8 +45,9 @@ public class MainActivity extends Activity {
     static final int SERVERPORT = 9000; //8000= echo server, 9000=real server
     static final int SEEK_DEST = 95;
     static final int MAX_LINE = 9;
-    static final String VERSION = "2.19test";
+    static final String VERSION = "2.020";
     public static String BOARD_ID = "CM_1_M";
+    public static int NO_ECHO_LIMIT = 1;
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
     private ScrollForeverTextView msg;
@@ -53,8 +56,8 @@ public class MainActivity extends Activity {
     private String str1, bname, returnWorkerID, key;
     private SeekBar mySeekBar;
     private boolean connected, swapWorking, swapEnd, bc_msg_reply, bc_msgWorking, notOnstop=false, swap_msgWorking=false, swap_msg_reply=false, msgRequest=false;
-    private ListView firstlist, valueListView, boxListView;
-    private MySimpleArrayAdapter myAdapter;
+    private ListView itemListView, valueListView, boxListView;
+    private MySimpleArrayAdapter itemAdapter;
     private ValueAdapter valueAdapter;
     private ArrayList<ValueItem> valueArray;
     private BoxAdapter boxAdapter;
@@ -74,7 +77,10 @@ public class MainActivity extends Activity {
 
     private static Context staticContext;
     private static Activity staticActivity;
-    private static boolean restarting = false;
+    private static boolean restarting = false, isEchoing = false;
+    private static int noEchoCount = 0;
+    private static double nextTime = 0;
+    private static Thread aliveCheckingThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +91,7 @@ public class MainActivity extends Activity {
         restarting = false;
         final SharedPreferences settings = getApplicationContext().getSharedPreferences("EC510", 0);
         BOARD_ID = settings.getString("board_name", "CM") + "_" + settings.getString("board_ID", "1") + "_M";
+        NO_ECHO_LIMIT = settings.getInt("echo_limit", 10) / 10;
         Log.d("mylog", "========== App started. BOARD_ID=" + BOARD_ID);
         TextView board_id = (TextView) findViewById(R.id.board_id);
         if(BOARD_ID.contains("CM"))
@@ -130,7 +137,8 @@ public class MainActivity extends Activity {
         bc_msg_reply = false;
         bc_msgWorking = false;
         brandName = (TextView) findViewById(R.id.brandName);
-        firstlist = (ListView) findViewById(R.id.listView2);
+        itemListView = (ListView) findViewById(R.id.listView2);
+        itemListView.setOnItemClickListener(itemBarcodeListener);
         //connectionTimeoutCount = 0;
         returnWorkerID = "";
         brandSelector = (Spinner) findViewById(R.id.brandSelecter);
@@ -210,16 +218,6 @@ public class MainActivity extends Activity {
         tab.setTextSize(24);
 
         //if (!BuildConfig.DEBUG) {
-        new ANRWatchDog(4900).setANRListener(new ANRWatchDog.ANRListener() {
-            @Override
-            public void onAppNotResponding(ANRError error) {
-                // Handle the error. For example, log it to HockeyApp:
-                Log.e("mylog", "ERROR: watchdog: onAppNotResponding!");
-                LogToServer.getRequest("ERROR: watchdog: onAppNotResponding!");
-                restart("ANRWatchDog");
-            }
-        }).start();
-        Log.d("mylog", "ANR watchdog started.");
         //}
 
         try {
@@ -256,18 +254,15 @@ public class MainActivity extends Activity {
                 }).start();
                 Log.d("mylog", "no network end");
             } else {  /* 開啟一個新線程，在新線程裡執行耗時的方法 */
+                Log.d("mylog", "has network");
+                active = true;
+                isEchoing = true;
                 rebootCount = "";
                 pd = new ProgressDialog(MainActivity.this);
                 pd.setTitle("連線中");
                 pd.setMessage("Please wait...");
                 pd.setCancelable(false);
                 LogToServer.getRequest("連線中...");
-            /*pd.setButton(DialogInterface.BUTTON_NEUTRAL, "更改ID...", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    //dialog.dismiss();
-                }
-            });*/
                 try {
                     pd.show();
                 } catch ( Exception e) {
@@ -281,6 +276,31 @@ public class MainActivity extends Activity {
                         handler.sendEmptyMessage(0);// 執行耗時的方法之後發送消給handler
                     }
                 }).start();
+                active = true;
+                aliveCheckingThread = new Thread(new Runnable() {
+                    public void run() {
+                        long threadId = Thread.currentThread().getId();
+                        while(active) {
+                            if(!isEchoing && !swapWorking) {
+                                noEchoCount++;
+                                if(noEchoCount > NO_ECHO_LIMIT) {
+                                    Log.e("mylog", "ERROR: no echo received!");
+                                    LogToServer.getRequest("ERROR: no echo received!");
+                                    restart("NO echo.");
+                                }
+                            } else
+                                isEchoing = false;
+                            SocketHandler.writeToSocket("ECHO\tAliveCheck" + threadId + "<END>");
+                            Log.d("mylog", "ECHO send...");
+                            try {
+                                Thread.sleep(10000);  //sleep 10 seconds
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                });
+                aliveCheckingThread.start();
                 /*new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -331,6 +351,8 @@ public class MainActivity extends Activity {
         @Override
         public void handleMessage(Message msg) {// handler接收到消息後就會執行此方法
             updateUI();
+            if(!connected)
+                restart("updateUI not connected");
             //pd.dismiss();// 關閉ProgressDialog
         }
     };
@@ -413,6 +435,18 @@ public class MainActivity extends Activity {
 
     private void updateUI() {
         Log.d("mylog", "updateUI start.");
+
+        new ANRWatchDog(4800).setANRListener(new ANRWatchDog.ANRListener() {
+            @Override
+            public void onAppNotResponding(ANRError error) {
+                // Handle the error. For example, log it to HockeyApp:
+                Log.e("mylog", "ERROR: watchdog: onAppNotResponding!");
+                LogToServer.getRequest("ERROR: watchdog: onAppNotResponding!");
+                restart("ANRWatchDog");
+            }
+        }).start();
+        Log.d("mylog", "ANR watchdog started.");
+
         if(str1 != null && str1.contains("CONNECT_OK")) {
             connectState.setText("伺服器辨識成功");
             LogToServer.getRequest("伺服器辨識成功");
@@ -425,7 +459,7 @@ public class MainActivity extends Activity {
                     /*if (List_file != null)
                         List_file.clear();*/
                         brandSelector.setSelection(0);
-                        myAdapter.notifyDataSetChanged();
+                        itemAdapter.notifyDataSetChanged();
                         swapTitle.setText("目前無換牌指令");
                         swapTitle.setTextColor(getResources().getColor(R.color.dark_gray));
                         swapMsg.setText("");
@@ -523,6 +557,37 @@ public class MainActivity extends Activity {
                 returnWorkerID += b.getText();
                 workerID.setText(returnWorkerID);
             }
+        }
+    };
+
+    private AdapterView.OnItemClickListener itemBarcodeListener = new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View viewClicked, int position, long id2) {
+            ListItem item = itemAdapter.getItem(position);
+            String barcode_text = item.productSerial;
+            String title = item.productName;
+            Bitmap bitmap = null;
+            try {
+                bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 500, 200);
+            } catch (WriterException e) {
+                e.printStackTrace();
+            }
+            //custom dialog of barcode
+            final Dialog d = new Dialog(MainActivity.this);
+            d.setContentView(R.layout.barcode_dialog);
+            d.setTitle(title);
+            TextView t = (TextView) d.findViewById(R.id.barcodeText);
+            ImageView i = (ImageView) d.findViewById(R.id.barcodeImg);
+            t.setText(barcode_text);
+            i.setImageBitmap(bitmap);
+            Button exitBtn = (Button) d.findViewById(R.id.buttonExit);
+            exitBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    d.dismiss();
+                }
+            });
+            d.show();
         }
     };
 
@@ -656,6 +721,8 @@ public class MainActivity extends Activity {
                         dialog.show();
                     }
                 } else if(s.startsWith("UPDATE_BOX\t")) { //UPDATE_BOX \t 線號 \t 現在箱數 \t 目標箱數
+                    //if(!CheckIfNeedRedraw())
+                    //    continue;
                     s = s.replaceAll("UPDATE_BOX\t", "");
                     //s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -671,6 +738,8 @@ public class MainActivity extends Activity {
                     }
                     boxAdapter.notifyDataSetChanged();
                 } else if(s.startsWith("UPDATE_VALUE\t")) {  //時間\t線號\t品牌名稱\t重量max\t重量value\t重量min\t圓周max\t圓周value\t圓周min\t透氣率max\t透氣率value\t透氣率min
+                    if(!CheckIfNeedRedraw())
+                        continue;
                     s = s.replaceAll("UPDATE_VALUE\t", "");
                     //s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -717,8 +786,8 @@ public class MainActivity extends Activity {
                         for(int j=0; j<List_file.size(); j++) {
                             if(List_file.get(j).productSerial.equals(items[0])) {
                                 List_file.get(j).itemCount = items[1];
-                                if(myAdapter!=null)
-                                    myAdapter.notifyDataSetChanged();
+                                if(itemAdapter !=null)
+                                    itemAdapter.notifyDataSetChanged();
                             }
                         }
                     }
@@ -743,13 +812,13 @@ public class MainActivity extends Activity {
                             barcode_text = single_item[2];
                             bname = single_item[1];
                             brandName.setText(bname);
-                            Bitmap bitmap = null;
+                            /*Bitmap bitmap = null;
                             try {
                                 bitmap = OneDBarcode.encodeAsBitmap(barcode_text, 450, 100);
                             } catch (WriterException e) {
                                 e.printStackTrace();
-                            }
-                            ListItem singleItem = new ListItem(single_item[3], single_item[2], "0.0", bitmap);
+                            }*/
+                            ListItem singleItem = new ListItem(single_item[3], single_item[2], "0.0");
                             List_file.add(singleItem);
                         }
                     }
@@ -802,11 +871,11 @@ public class MainActivity extends Activity {
                     if(List_file != null)
                         List_file.clear();
                     brandName.setText("(無)");
-                    myAdapter.notifyDataSetChanged();
+                    itemAdapter.notifyDataSetChanged();
                     nextBrandArray.clear();
                     nextBrandAdapter.notifyDataSetChanged();
                     //nextBrandAdapter = new ArrayAdapter<String>(MainActivity.this,  android.R.layout.simple_spinner_dropdown_item, nextBrandArray);
-                }  else if (s.startsWith("QUERY_REPLY\t")) {
+                } else if (s.startsWith("QUERY_REPLY\t")) {
                     s = s.replaceAll("QUERY_REPLY\t", "");
                     //s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
@@ -828,6 +897,10 @@ public class MainActivity extends Activity {
                         nextBrandAdapter.notifyDataSetChanged();
                         key = null;
                     }
+                } else if (s.contains("ECHO_REPLY")) {
+                    isEchoing = true;
+                    noEchoCount = 0;
+                    Log.d("mylog", "got ECHO_REPLY");
                 }
                 /*if (s!=null && s.contains("CONNECT_OK")) {
                     active = true;
@@ -835,8 +908,8 @@ public class MainActivity extends Activity {
                 }*/
             }
             if(updateList) {
-                myAdapter = new MySimpleArrayAdapter(MainActivity.this, List_file);
-                firstlist.setAdapter(myAdapter);
+                itemAdapter = new MySimpleArrayAdapter(MainActivity.this, List_file);
+                itemListView.setAdapter(itemAdapter);
             }
             try {
                 synchronized (lock) {
@@ -929,6 +1002,19 @@ public class MainActivity extends Activity {
         return super.onKeyDown(keyCode, event);
     }
 
+    private boolean CheckIfNeedRedraw() {
+        Calendar c = Calendar.getInstance();
+        int sec = c.get(Calendar.SECOND);
+        if(sec > nextTime) {
+            nextTime = nextTime + 0.5;
+            if (nextTime >= 60)
+                nextTime = 0;
+            return true;
+        }
+        else
+            return false;
+    }
+
     @Override
     public void onStart() {
         super.onStart();
@@ -937,13 +1023,6 @@ public class MainActivity extends Activity {
 
     @Override
     public void onStop() {
-        /*if(!notOnstop) {
-            LogToServer.d("mylog", "onStop is called");
-            System.exit(0);
-            task.cancel(true);
-            SocketHandler.closeSocket();
-            finish();
-        }*/
         Log.d("mylog", "onStop is called");
         LogToServer.getRequest("onStop is called");
         //SocketHandler.closeSocket();
@@ -995,6 +1074,8 @@ public class MainActivity extends Activity {
                 t.interrupt();
             }
         }
+        if(aliveCheckingThread!= null)
+            aliveCheckingThread.interrupt();
         for (Thread t : threads) {
             if(t!=null) {
                 if(t.getId()==Thread.currentThread().getId()) continue;

@@ -33,7 +33,7 @@ public class MySimpleArrayAdapter extends ArrayAdapter<ListItem> {
             viewHolder.first = (TextView) convertView.findViewById(R.id.firstLine);
             viewHolder.second = (TextView) convertView.findViewById(R.id.secondLine);
             viewHolder.itemCount = (TextView) convertView.findViewById(R.id.itemCount);
-            viewHolder.image = (ImageView) convertView.findViewById(R.id.icon);
+            //viewHolder.image = (ImageView) convertView.findViewById(R.id.icon);
             convertView.setTag(viewHolder);
         } else {
             viewHolder = (ItemHolder) convertView.getTag();
@@ -45,7 +45,7 @@ public class MySimpleArrayAdapter extends ArrayAdapter<ListItem> {
         viewHolder.first.setText(i.productName);
         viewHolder.second.setText(i.productSerial);
         viewHolder.itemCount.setText(String.valueOf(i.itemCount));
-        viewHolder.image.setImageBitmap(i.barcode);
+        //viewHolder.image.setImageBitmap(i.barcode);
         return convertView;
     }
 

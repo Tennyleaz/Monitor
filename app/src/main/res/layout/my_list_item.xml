@@ -9,7 +9,6 @@
         android:layout_height="fill_parent"
         android:layout_marginRight="6dip"
         android:contentDescription="TODO"
-        android:src="@drawable/test"
         android:layout_alignParentEnd="true"
         android:scaleType="center"
         android:layout_below="@+id/firstLine" />

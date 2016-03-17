@@ -26,8 +26,10 @@ public class ChangeID extends Activity {
 
         setContentView(R.layout.id_changer);
         ArrayList<String> nameArray, idArray;
+        ArrayList<Integer> echoArray;
         final Spinner nameSelect = (Spinner) findViewById(R.id.nameSelect);
         final Spinner idSelect = (Spinner) findViewById(R.id.numberSelect);
+        final Spinner echoSelect = (Spinner) findViewById(R.id.echoLimitSelector);
         TextView name = (TextView) findViewById(R.id.name);
         TextView number = (TextView) findViewById(R.id.number);
         Button btn = (Button) findViewById(R.id.button);
@@ -40,6 +42,7 @@ public class ChangeID extends Activity {
         number.setText(settings.getString("board_ID", "1"));
         nameArray = new ArrayList<String>();
         idArray = new ArrayList<String>();
+        echoArray = new ArrayList<Integer>();
         nameArray.add("CM");
         nameArray.add("PM");
         nameArray.add("PP");
@@ -52,19 +55,29 @@ public class ChangeID extends Activity {
         idArray.add("7");
         idArray.add("8");
         idArray.add("9");
+        echoArray.add(10);
+        echoArray.add(20);
+        echoArray.add(30);
+        echoArray.add(40);
+        echoArray.add(50);
+        echoArray.add(60);
         ArrayAdapter<String> nameAdapter = new ArrayAdapter<String>(ChangeID.this,  android.R.layout.simple_spinner_dropdown_item, nameArray);
         ArrayAdapter<String> idAdapter = new ArrayAdapter<String>(ChangeID.this,  android.R.layout.simple_spinner_dropdown_item, idArray);
+        ArrayAdapter<Integer> echoAdapter = new ArrayAdapter<Integer>(ChangeID.this,  android.R.layout.simple_spinner_dropdown_item, echoArray);
         nameSelect.setAdapter(nameAdapter);
         idSelect.setAdapter(idAdapter);
+        echoSelect.setAdapter(echoAdapter);
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String name, ID;
                 name = nameSelect.getSelectedItem().toString();
                 ID = idSelect.getSelectedItem().toString();
+                Integer ec = (Integer) echoSelect.getSelectedItem();
                 SharedPreferences.Editor editor = settings.edit();
                 editor.putString("board_name", name);
                 editor.putString("board_ID", ID);
+                editor.putInt("echo_limit", ec);
                 // Apply the edits!
                 editor.apply();
                 //Intent intent = new Intent(ChangeID.this, MainActivity.class);
