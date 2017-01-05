@@ -50,7 +50,7 @@ public class MainActivity extends Activity {
     public static int NO_ECHO_LIMIT = 1;
 
     private TextView connectState, swapTitle, brandName, swapMsg, workerID;
-    private ScrollForeverTextView msg;
+    private ScrollForeverTextView scrollingMsg;
     private static ProgressDialog pd;
     private static AsyncTask task = null;
     private String str1, bname, returnWorkerID, key;
@@ -122,7 +122,7 @@ public class MainActivity extends Activity {
 
 
         connectState = (TextView) findViewById(R.id.connectState);
-        msg = (ScrollForeverTextView) findViewById(R.id.msg);
+        scrollingMsg = (ScrollForeverTextView) findViewById(R.id.msg);
         mySeekBar = (SeekBar) findViewById(R.id.myseek);
         mySeekBar.setEnabled(false);
         mySeekBar.setVisibility(View.GONE);
@@ -286,7 +286,8 @@ public class MainActivity extends Activity {
                                 if(noEchoCount > NO_ECHO_LIMIT) {
                                     Log.e("mylog", "ERROR: no echo received!");
                                     LogToServer.getRequest("ERROR: no echo received!");
-                                    restart("NO echo.");
+                                    //restart("NO echo.");
+                                    scrollingMsg.setText("與伺服器連線已中斷");
                                 }
                             } else
                                 isEchoing = false;
@@ -351,8 +352,10 @@ public class MainActivity extends Activity {
         @Override
         public void handleMessage(Message msg) {// handler接收到消息後就會執行此方法
             updateUI();
-            if(!connected)
-                restart("updateUI not connected");
+            if(!connected) {
+                //restart("updateUI not connected");
+                scrollingMsg.setText("與伺服器連線已中斷");
+            }
             //pd.dismiss();// 關閉ProgressDialog
         }
     };
@@ -368,7 +371,8 @@ public class MainActivity extends Activity {
             }
             if(dialog!=null && dialog.isShowing()) return;
             if(connected) return;
-            if(active) {
+            scrollingMsg.setText("與伺服器連線已中斷");
+            /*if(active) {
                 active = false;
                 dialog = new AlertDialog.Builder(MainActivity.this).create();
                 dialog.setTitle("警告");
@@ -392,6 +396,7 @@ public class MainActivity extends Activity {
                 public void run() {
                     Log.d("mylog", "ServerDownHandler wait 5000ms");
                     LogToServer.getRequest("ServerDownHandler wait 5000ms, will restart app.");
+                    scrollingMsg.setText("與伺服器連線已中斷");
                     try { Thread.sleep(5000); }
                     catch (InterruptedException e) {
                         Log.e("mylog", "InterruptedException e=" + e);
@@ -428,7 +433,7 @@ public class MainActivity extends Activity {
                     finish();
                     Log.d("mylog", "ServerDownHandler end.");
                 }
-            }).start();
+            }).start();*/
             return;
         }
     };
@@ -442,7 +447,8 @@ public class MainActivity extends Activity {
                 // Handle the error. For example, log it to HockeyApp:
                 Log.e("mylog", "ERROR: watchdog: onAppNotResponding!");
                 LogToServer.getRequest("ERROR: watchdog: onAppNotResponding!");
-                restart("ANRWatchDog");
+                //restart("ANRWatchDog");
+                scrollingMsg.setText("與伺服器連線已中斷");
             }
         }).start();
         Log.d("mylog", "ANR watchdog started.");
@@ -510,7 +516,7 @@ public class MainActivity extends Activity {
             connectState.setTextColor(getResources().getColor(R.color.red));
             connected = false;
         }
-        msg.setText("no message");
+        scrollingMsg.setText("no message");
         Log.d("mylog", "updateUI finished. to dismiss pd");
         pd.dismiss();
     }
@@ -663,7 +669,7 @@ public class MainActivity extends Activity {
         }
         @Override
         protected void onProgressUpdate(String... values) {
-            if( msg.getText().equals("no message"))
+            if( scrollingMsg.getText().equals("no message"))
                 msgRequest = true;
 
             final String result = values[0];
@@ -776,7 +782,7 @@ public class MainActivity extends Activity {
                     s = s.replaceAll("MSG\t", "");
                     s = s.replaceAll("<N>", "\n");
                     s = s.replaceAll("<END>", "");
-                    msg.setText(s);
+                    scrollingMsg.setText(s);
                     msgRequest = false;
                     LogToServer.getRequest("MSG已經更新");
                 } else if(s.startsWith("UPDATE_LIST\t")) {
